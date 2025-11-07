@@ -2,11 +2,11 @@ from globals import *
 from classes.font import Font
 from game import game
 
-""" Настройки """
+# # # Настройки
 clock = py.time.Clock()
 fps = 30
 
-""" Переменные """
+# # # Переменные
 game_show = False
 font = Font('assets/font/PixelizerBold.ttf')
 
@@ -52,8 +52,6 @@ while True:
             game_show = True
 
     if game_show:
-        # print('Экран игры')
-        # screen.fill(WHITE)
         game()
     else:
         screen_saver()

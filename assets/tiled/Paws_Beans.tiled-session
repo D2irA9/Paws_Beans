@@ -3,12 +3,30 @@
         "height": 4300,
         "width": 2
     },
+    "activeFile": "",
+    "expandedProjectPaths": [
+    ],
+    "fileStates": {
+        "maps/coffee_house.tmx": {
+            "scale": 0.9420833333333333,
+            "selectedLayer": 4,
+            "viewCenter": {
+                "x": 456.4352056612118,
+                "y": 360.3715170278638
+            }
+        }
+    },
     "last.imagePath": "C:/Paws_Beans/assets/sprites/interior",
     "map.height": 15,
     "map.lastUsedFormat": "tmx",
     "map.tileHeight": 48,
     "map.tileWidth": 48,
     "map.width": 25,
+    "openFiles": [
+    ],
+    "project": "Paws_Beans.tiled-project",
+    "recentFiles": [
+    ],
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {
         "height": 48,
