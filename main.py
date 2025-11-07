@@ -1,5 +1,6 @@
 from globals import *
 from classes.font import Font
+from game import game
 
 """ Настройки """
 clock = py.time.Clock()
@@ -51,8 +52,9 @@ while True:
             game_show = True
 
     if game_show:
-        print('Экран игры')
-        screen.fill(WHITE)
+        # print('Экран игры')
+        # screen.fill(WHITE)
+        game()
     else:
         screen_saver()
 
