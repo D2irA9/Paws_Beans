@@ -29,7 +29,6 @@ class Player(py.sprite.Sprite):
     def update(self):
         """ Обновление анимации """
         now = py.time.get_ticks()
-
         if now - self.last_update > 100:
             self.current_frame = (self.current_frame + 1) % len(self.animations[self.current_animation])
             self.image = self.animations[self.current_animation][self.current_frame]
