@@ -48,13 +48,17 @@ while True:
         if event.type == py.QUIT:
             py.quit()
             sys.exit()
-        if event.type == py.KEYDOWN:
-            game_show = True
+        elif event.type == py.KEYDOWN:
+            if event.key == py.K_LALT:
+                py.quit()
+                sys.exit()
+            else:
+                game_show = True
 
-    if game_show:
-        game()
-    else:
+    if not game_show:
         screen_saver()
+    else:
+        game()
 
     py.display.flip()
     clock.tick(fps)
