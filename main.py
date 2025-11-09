@@ -1,5 +1,4 @@
 from globals import *
-from classes.font import Font
 from game import game
 
 # # # Настройки
@@ -8,7 +7,6 @@ fps = 30
 
 # # # Переменные
 game_show = False
-font = Font('assets/font/PixelizerBold.ttf')
 
 def screen_saver():
     """ Заставка """
