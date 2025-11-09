@@ -20,11 +20,19 @@
             }
         },
         "tmx/coffee_house.tmx": {
-            "scale": 4,
+            "scale": 0.75,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 601.3333333333334,
+                "y": 156.66666666666663
+            }
+        },
+        "tmx/stations.tmx": {
+            "scale": 0.5,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 613.25,
-                "y": 228.125
+                "x": 1268,
+                "y": 483
             }
         },
         "tsx/Room_Builder_free_48x48.tsx": {

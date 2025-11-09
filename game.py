@@ -4,15 +4,17 @@ from classes.character import Player
 from classes.node import Button
 
 # # # Переменные
-map = Map('assets/tiled/tmx/coffee_house.tmx', 48, 1)
-map_loaded = False # Флаг для проверки загрузки карты
+coffee_house = Map('assets/tiled/tmx/coffee_house.tmx', 48, 1)
+stations = Map('assets/tiled/tmx/stations.tmx', 48, 1)
+map_loaded = False # Флаг для проверки загрузки карт
+condition = 'coffee_house'
 
 player = Player(3, (530, 60))
 
 start  = Button(300, 100, ORANGE, (900, 620))
 
 def game(events):
-    global map_loaded
+    global map_loaded, condition
 
     for event in events:
         if event.type == py.QUIT:
@@ -22,12 +24,17 @@ def game(events):
         if event.type == py.MOUSEBUTTONDOWN:
             if start.signal(event.pos):
                 print('Сигнал получен ')
+                condition = 'stations'
 
     if not map_loaded:
-        map.load_map()
+        coffee_house.load_map()
+        stations.load_map()
         map_loaded = True
 
-    map.draw(screen)
-    player.update()
-    player.draw(screen)
+    if condition == 'coffee_house':
+        coffee_house.draw(screen)
+        player.update()
+        player.draw(screen)
+    else:
+        stations.draw(screen)
     start.draw(screen)
