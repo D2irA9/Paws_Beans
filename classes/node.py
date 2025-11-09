@@ -12,9 +12,10 @@ class Label:
 
 class Button:
     """ Кнопки """
-    def __init__(self, width, height, bg_color, pos):
+    def __init__(self, width, height, bg_color, pos, border_width=3):
         self.image = py.Surface((width, height))
         self.image.fill(bg_color)
+        py.draw.rect(self.image, (58, 58, 80), (0, 0, width, height), border_width)
         self.rect = self.image.get_rect(topleft=pos)
 
     def draw(self, screen):
