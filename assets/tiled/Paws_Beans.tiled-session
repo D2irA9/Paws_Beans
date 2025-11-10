@@ -3,7 +3,7 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "tmx/coffee_house.tmx",
+    "activeFile": "tmx/stations.tmx",
     "expandedProjectPaths": [
     ],
     "fileStates": {
@@ -23,13 +23,13 @@
             "scale": 0.75,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 601.3333333333334,
-                "y": 156.66666666666663
+                "x": 642.6666666666666,
+                "y": 359.99999999999994
             }
         },
         "tmx/stations.tmx": {
             "scale": 0.5,
-            "selectedLayer": 0,
+            "selectedLayer": 1,
             "viewCenter": {
                 "x": 1268,
                 "y": 483
@@ -51,17 +51,18 @@
     "map.tileWidth": 48,
     "map.width": 25,
     "openFiles": [
-        "maps/coffee_house.tmx",
         "tsx/Room_Builder_free_48x48.tsx",
         "tsx/my_interior.tsx",
-        "tmx/coffee_house.tmx"
+        "tmx/coffee_house.tmx",
+        "tmx/stations.tmx"
     ],
     "project": "Paws_Beans.tiled-project",
     "recentFiles": [
-        "maps/coffee_house.tmx",
         "tsx/Room_Builder_free_48x48.tsx",
         "tsx/my_interior.tsx",
-        "tmx/coffee_house.tmx"
+        "tmx/coffee_house.tmx",
+        "tmx/stations.tmx",
+        "maps/coffee_house.tmx"
     ],
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {

@@ -10,8 +10,12 @@ py.display.set_caption('Paws & Beans')
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GRAY = (128, 128, 128)
+
 ORANGE = (255,165,0)
+GREEN = (76,187,23)
 BLUE = (100, 100, 255)
+VIOLET = (153,50,204)
+
 CONTOUR = (58, 58, 80)
 
 # # # Переменные

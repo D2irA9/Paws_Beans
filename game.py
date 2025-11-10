@@ -4,8 +4,8 @@ from classes.character import Player
 from classes.node import Button
 
 # # # Карты
-coffee_house = Map('assets/tiled/tmx/coffee_house.tmx', 48, 1)
-stations = Map('assets/tiled/tmx/stations.tmx', 48, 1)
+coffee_house_map = Map('assets/tiled/tmx/coffee_house.tmx', 48, 1)
+stations_map = Map('assets/tiled/tmx/stations.tmx', 48, 1)
 map_loaded = False # Флаг для проверки загрузки карт
 
 # Все состояния
@@ -16,11 +16,13 @@ condition = [
     'station 3',
 ]
 current_status = condition[0]
+
 # # # Игрок
 player = Player(3, (530, 60))
 
-# # # Узлы
-start  = Button(300, 100, ORANGE, (900, 620))
+# # # Кнопки
+button_left  = Button(300, 100, ORANGE, (900, 620))
+# button_right  = Button(300, 100, ORANGE, (0, 620))
 
 def game(events):
     global map_loaded, current_status
@@ -30,22 +32,24 @@ def game(events):
             py.quit()
             sys.exit()
         elif event.type == py.MOUSEBUTTONDOWN:
-            if start.signal(event.pos):
+            if button_left.signal(event.pos):
                 if current_status == condition[0]:
                     current_status = condition[1]
+                    button_left.change_color(GREEN)
                 elif current_status == condition[1]:
                     current_status = condition[0]
+                    button_left.change_color(ORANGE)
 
     if not map_loaded:
-        coffee_house.load_map()
-        stations.load_map()
+        coffee_house_map.load_map()
+        stations_map.load_map()
         map_loaded = True
 
     if current_status == condition[0]:
-        coffee_house.draw(screen)
+        coffee_house_map.draw(screen)
         player.update()
         player.draw(screen)
     elif current_status == condition[1]:
-        stations.draw(screen)
+        stations_map.draw(screen)
 
-    start.draw(screen)
+    button_left.draw(screen)
