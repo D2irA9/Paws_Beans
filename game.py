@@ -26,10 +26,11 @@ player = Player(3, (530, 60))
 
 # # # Кнопки
 button_left  = Button(300, 100, BLUE, (0, 620))
+button_left_F = False
 button_right  = Button(300, 100, ORANGE, (900, 620))
 
 def game(events):
-    global map_loaded, current_status
+    global map_loaded, current_status, button_left_F
 
     for event in events:
         if event.type == py.QUIT:
@@ -67,21 +68,31 @@ def game(events):
 
     # Если coffee_house
     if current_status == condition[0]:
+        button_left_F = False
         coffee_house_map.draw(screen)
         player.update()
         player.draw(screen)
-        button_right.draw(screen)
+
+        button_right.change_color(ORANGE)
     # Если stations1
     elif current_status == condition[1]:
+        button_left_F = True
         stations1_map.draw(screen)
-        button_right.draw(screen)
-        button_left.draw(screen)
+        button_right.change_color(GREEN)
+        button_left.change_color(BLUE)
     # Если stations2
     elif current_status == condition[2]:
+        button_left_F = True
         stations2_map.draw(screen)
-        button_right.draw(screen)
-        button_left.draw(screen)
+        button_right.change_color(ORANGE)
+        button_left.change_color(VIOLET)
     # Если stations3
     else:
+        button_left_F = False
         stations3_map.draw(screen)
-        button_right.draw(screen)
+        button_right.change_color(BLUE)
+
+    button_right.draw(screen)
+    if button_left_F:
+        button_left.draw(screen)
+
