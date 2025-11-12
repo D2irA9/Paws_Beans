@@ -42,3 +42,37 @@ class Button:
     def signal(self, pos):
         """ Получение сигнала """
         return self.rect.collidepoint(pos)
+
+class CircleButton:
+    """ Круглые кнопки """
+    def __init__(self, radius, bg_color, pos):
+        self.radius = radius
+        self.bg_color = bg_color
+        self.pos = pos
+        self.border_width = 3
+
+        diameter = radius * 2
+        self.image = py.Surface((diameter, diameter), py.SRCALPHA)
+        self.redraw()
+        self.rect = self.image.get_rect(center=pos)
+
+    def redraw(self):
+        """ Перерисовка кнопки """
+        diameter = self.radius * 2
+        self.image.fill((0, 0, 0, 0))
+        py.draw.circle(self.image, self.bg_color, (self.radius, self.radius), self.radius)
+        py.draw.circle(self.image, (58, 58, 80), (self.radius, self.radius), self.radius, self.border_width)
+
+    def change_color(self, new_color):
+        """ Смена цвета """
+        self.bg_color = new_color
+        self.redraw()
+
+    def draw(self, screen):
+        """ Отрисовка кнопки """
+        screen.blit(self.image, self.rect)
+
+    def signal(self, pos):
+        """ Получение сигнала"""
+        distance = ((pos[0] - self.rect.centerx) ** 2 + (pos[1] - self.rect.centery) ** 2) ** 0.5
+        return  distance <= self.radius
