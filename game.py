@@ -24,10 +24,40 @@ current_status = condition[0]
 # # # Игрок
 player = Player(3, (530, 60))
 
-# # # Рецепт
+# # # Заказ
 r = Recipe()
 order = r.generate_random_order()
-print(f"Чашка: {order['cup']}, Молоко: {order['milk']}({order["SM"]}), Эспрессо: {order['espresso']}({order["SE"]})")
+# print(f"Чашка: {order['cup']}, Молоко: {order['milk']}({order["SM"]}), Эспрессо: {order['espresso']}({order["SE"]})")
+cup = order['cup']
+SM = order["SM"]
+SE = order["SE"]
+# print(cup, SM, SE)
+def draw_order(screen, cup, SM, SE):
+    """Отрисовка заказа"""
+    x, y, width, height = 1000, 0, 200, 300
+
+    py.draw.rect(screen, WHITE, (x, y, width, height))
+    py.draw.rect(screen, CONTOUR, (x, y, width, height), 3)
+
+    lines = [
+        f"Чашка: {cup}",
+        f"Молоко: {SM}",
+        f"Эспрессо: {SE}"
+    ]
+
+    text_surfaces = []
+    for line in lines:
+        text_surface = font.text_ret(size=32, text=line, color=BLACK)
+        text_surfaces.append(text_surface)
+
+    line_height = 40
+    start_y = y + 30
+
+    for i, text_surface in enumerate(text_surfaces):
+        text_rect = text_surface.get_rect()
+        text_rect.centerx = x + width // 2
+        text_rect.y = start_y + i * line_height
+        screen.blit(text_surface, text_rect)
 
 # # # Кнопки
 # Баковые кнопки
@@ -104,6 +134,7 @@ def game(events):
         screen.fill(ORANGE1)
         button_right.change_color(GREEN)
         button_left.change_color(BLUE)
+        draw_order(screen, cup, SM, SE)
     # Если stations2
     elif current_status == condition[2]:
         button_left_S = True
