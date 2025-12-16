@@ -4,8 +4,8 @@ class Recipe:
     """ Класс рецепты """
 
     def __init__(self):
-        self.milk_types = ["обычное"] # "обезжиренное", "соевое"
-        self.espresso_types = ["кофе"] # "городское", "без кофеина"
+        # self.milk_types = ["обычное"] # "обезжиренное", "соевое"
+        # self.espresso_types = ["кофе"] # "городское", "без кофеина"
         self.cup_sizes = ["S", "M", "L"]
 
     def generate_random_order(self):
@@ -21,13 +21,13 @@ class Recipe:
             SE = random.randint(1, 6)
             SM = 6 - SE
 
-        milk = random.choice(self.milk_types)
-        espresso = random.choice(self.espresso_types)
+        # milk = random.choice(self.milk_types)
+        # espresso = random.choice(self.espresso_types)
 
         return {
             "cup": cup,
-            "milk": milk,
+            # "milk": milk,
             "SM": SM,
-            "espresso": espresso,
+            # "espresso": espresso,
             "SE": SE
         }
