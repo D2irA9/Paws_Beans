@@ -6,7 +6,7 @@ class Player(py.sprite.Sprite):
         super().__init__()
         self.width_spr = 16
         self.height_spr = 32
-        self.scale =scale
+        self.scale = scale
         self.sprite = py.image.load('assets/sprites/characters/Adam_16x16.png').convert_alpha()
         self.animation_speed = 0.9
         self.animations = {
@@ -38,3 +38,12 @@ class Player(py.sprite.Sprite):
     def draw(self, screen):
         """ Отображение игрока """
         screen.blit(self.image, self.rect)
+
+class Nps(py.sprite.Sprite):
+    """ Класс NPC """
+    def __init__(self, scale, path):
+        super().__init__()
+        self.width_spr = 16
+        self.height_spr = 32
+        self.scale = scale
+

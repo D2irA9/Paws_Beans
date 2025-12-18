@@ -243,4 +243,4 @@ def game(events):
     if animate_finish:
         draw_finish(ready_order['cup'], ready_order['SM'], ready_order['SE'], order)
 
-    print(ready_order)
+    # print(ready_order)
