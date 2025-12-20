@@ -3,7 +3,7 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "tmx/stations3.tmx",
+    "activeFile": "tmx/coffee_house.tmx",
     "expandedProjectPaths": [
     ],
     "fileStates": {
@@ -21,7 +21,7 @@
         },
         "tmx/coffee_house.tmx": {
             "scale": 0.75,
-            "selectedLayer": 5,
+            "selectedLayer": 2,
             "viewCenter": {
                 "x": 643.3333333333334,
                 "y": 359.33333333333326
@@ -39,24 +39,24 @@
             "scale": 0.7449583333333333,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 599.3623804463338,
-                "y": 360.4228424408525
+                "x": 600.0335589238772,
+                "y": 359.7516639633089
             }
         },
         "tmx/stations2.tmx": {
             "scale": 0.9420833333333333,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 467.58071649712514,
-                "y": 360.3715170278638
+                "x": 599.734630694383,
+                "y": 359.84077841662975
             }
         },
         "tmx/stations3.tmx": {
             "scale": 0.9420833333333333,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 467.58071649712514,
-                "y": 360.3715170278638
+                "x": 1007.8726227333038,
+                "y": 364.61742591773555
             }
         },
         "tsx/Room_Builder_free_48x48.tsx": {
@@ -86,10 +86,10 @@
     "recentFiles": [
         "tsx/Room_Builder_free_48x48.tsx",
         "tsx/my_interior.tsx",
-        "tmx/coffee_house.tmx",
-        "tmx/stations1.tmx",
-        "tmx/stations2.tmx",
         "tmx/stations3.tmx",
+        "tmx/stations2.tmx",
+        "tmx/stations1.tmx",
+        "tmx/coffee_house.tmx",
         "tmx/stations.tmx",
         "maps/coffee_house.tmx"
     ],
