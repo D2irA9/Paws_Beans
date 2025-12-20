@@ -1,131 +1,121 @@
 import pygame as py
 
-class Player(py.sprite.Sprite):
-    """ Класс Игрока """
-    def __init__(self, scale, pos):
+class Character(py.sprite.Sprite):
+    """ Класс Персонажей """
+    def __init__(self, scale, pos, sprite_path, path=None):
         super().__init__()
         self.width_spr = 16
         self.height_spr = 32
         self.scale = scale
-        self.sprite = py.image.load('assets/sprites/characters/Adam_16x16.png').convert_alpha()
-        self.animation_speed = 0.9
+        self.speed = 2
+        self.sprite = py.image.load(sprite_path).convert_alpha()
         self.animations = {
-            'idle': [
-                py.transform.scale(self.sprite.subsurface((288, 32, self.width_spr, self.height_spr)), (self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((304, 32, self.width_spr, self.height_spr)), (self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((320, 32, self.width_spr, self.height_spr)), (self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((336, 32, self.width_spr, self.height_spr)), (self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((352, 32, self.width_spr, self.height_spr)), (self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((368, 32, self.width_spr, self.height_spr)), (self.width_spr * self.scale, self.height_spr * self.scale)),
-            ]
+            'idle_down': self.load_animation_frames(32, 288, 6),
+            'idle_up': self.load_animation_frames(32, 96, 6),
+            'idle_left': self.load_animation_frames(32, 192, 6),
+            'idle_right': self.load_animation_frames(32, 0, 6),
+
+            'walk_down': self.load_animation_frames(64, 288, 6),
+            'walk_up': self.load_animation_frames(64, 96, 6),
+            'walk_left': self.load_animation_frames(64, 192, 6),
+            'walk_right': self.load_animation_frames(64, 0, 6),
         }
-        self.pos = pos
-        self.last_update = py.time.get_ticks()
-        self.current_animation = 'idle'
+        self.current_animation = 'idle_down'
         self.current_frame = 0
+        self.pos = list(pos)
+        self.last_update = py.time.get_ticks()
         self.image = self.animations[self.current_animation][self.current_frame]
         self.rect = self.image.get_rect(topleft=pos)
+        self.path = path or []
+        self.current_path_index = 0
+        self.is_moving = bool(self.path)
+        self.target_pos = None
+        if self.path:
+            self.target_pos = self.path[0]
+
+    def load_animation_frames(self, start_y, start_x, frame_count):
+        """ Загрузка кадров анимации """
+        frames = []
+        for i in range(frame_count):
+            x = start_x + (i * self.width_spr)
+            frame = self.sprite.subsurface((x, start_y, self.width_spr, self.height_spr))
+            scaled_frame = py.transform.scale(frame, (self.width_spr * self.scale, self.height_spr * self.scale))
+            frames.append(scaled_frame)
+        return frames
+
+    def set_path(self, new_path):
+        """ Установить новый путь """
+        self.path = new_path
+        self.current_path_index = 0
+        self.is_moving = bool(new_path)
+        if new_path:
+            self.target_pos = new_path[0]
+            self.start_moving_to_target()
+
+    def start_moving_to_target(self):
+        """ Начать движение к текущей цели """
+        if self.current_path_index < len(self.path):
+            self.target_pos = self.path[self.current_path_index]
+            self.is_moving = True
 
     def update(self):
-        """ Обновление анимации """
+        """ Обновление анимация + движение """
         now = py.time.get_ticks()
         if now - self.last_update > 100:
             self.current_frame = (self.current_frame + 1) % len(self.animations[self.current_animation])
             self.image = self.animations[self.current_animation][self.current_frame]
             self.last_update = now
+        if self.is_moving and self.target_pos:
+            self.move_to_target()
 
+    def move_to_target(self):
+        """ Плавное движение к целевой точке """
+        target_x, target_y = self.target_pos
+        dx = target_x - self.pos[0]
+        dy = target_y - self.pos[1]
+        distance = (dx ** 2 + dy ** 2) ** 0.5
+        if distance < self.speed:
+            self.pos[0] = target_x
+            self.pos[1] = target_y
+            self.go_to_next_target()
+        else:
+            move_x = (dx / distance) * self.speed
+            move_y = (dy / distance) * self.speed
+            self.pos[0] += move_x
+            self.pos[1] += move_y
+            self.update_walking_animation(move_x, move_y)
+
+        self.rect.x = int(self.pos[0])
+        self.rect.y = int(self.pos[1])
+
+    def update_walking_animation(self, dx, dy):
+        """ Обновляет анимацию ходьбы в зависимости от направления """
+        if abs(dx) > abs(dy):
+            if dx > 0:
+                self.current_animation = 'walk_right'
+            else:
+                self.current_animation = 'walk_left'
+        else:
+            if dy > 0:
+                self.current_animation = 'walk_down'
+            else:
+                self.current_animation = 'walk_up'
+
+    def go_to_next_target(self):
+        """ Переход к следующей точке пути """
+        self.current_path_index += 1
+        if self.current_path_index < len(self.path):
+            self.target_pos = self.path[self.current_path_index]
+        else:
+            self.is_moving = False
+            self.path = []
+            self.current_path_index = 0
+            if 'walk' in self.current_animation:
+                self.current_animation = self.current_animation.replace('walk', 'idle')
 
     def draw(self, screen):
-        """ Отображение игрока """
+        """ Отрисовка """
         screen.blit(self.image, self.rect)
-
-class Nps(py.sprite.Sprite):
-    """ Класс NPC """
-    def __init__(self, scale, pos, path=None):
-        super().__init__()
-        self.width_spr = 16
-        self.height_spr = 32
-        self.scale = scale
-        self.sprite = py.image.load(path).convert_alpha()
-        self.animations = {
-            'idle_right':[
-                py.transform.scale(self.sprite.subsurface((0, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((16, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((32, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((48, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((64, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((80, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-            ],
-            'idle_up':[
-                py.transform.scale(self.sprite.subsurface((96, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((112, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((128, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((144, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((160, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((176, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-            ],
-            'idle_left':[
-                py.transform.scale(self.sprite.subsurface((192, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((208, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((224, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((240, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((256, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((272, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-            ],
-            'idle_down':[
-                py.transform.scale(self.sprite.subsurface((288, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((304, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((320, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((336, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((352, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((368, 32, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-            ],
-            'right':[
-                py.transform.scale(self.sprite.subsurface((0, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((16, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((32, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((48, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((64, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((80, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-            ],
-            'up':[
-                py.transform.scale(self.sprite.subsurface((96, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((112, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((128, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((144, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((160, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((176, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-            ],
-            'left':[
-                py.transform.scale(self.sprite.subsurface((192, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((208, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((224, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((240, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((256, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((272, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-            ],
-            'down':[
-                py.transform.scale(self.sprite.subsurface((288, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((304, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((320, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((336, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((352, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-                py.transform.scale(self.sprite.subsurface((368, 64, self.width_spr, self.height_spr)),(self.width_spr * self.scale, self.height_spr * self.scale)),
-            ],
-        }
-        self.current_animation = 'idle_down'
-        self.current_frame = 0
-        self.animations_speed = 0.9
-        self.pos = pos
-        self.last_update = py.time.get_ticks()
-        self.image = self.animations[self.current_animation][self.current_frame]
-        self.rect = self.image.get_rect(topleft=pos)
-        # Маршрут
-        self.route = []
-        self.current_path_index = 0
-        self.path_completed = False
-
-
 
 
 

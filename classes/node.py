@@ -7,8 +7,8 @@ class Label:
 
     def text_ret(self, size, text, color, antialias=True):
         """ Создание переменной текста """  
-        lable = py.font.Font(self.font_path, size)
-        return lable.render(text, antialias, color)
+        label = py.font.Font(self.font_path, size)
+        return label.render(text, antialias, color)
 
 class Button:
     """ Кнопки """
@@ -50,7 +50,6 @@ class CircleButton:
         self.bg_color = bg_color
         self.pos = pos
         self.border_width = 3
-
         diameter = radius * 2
         self.image = py.Surface((diameter, diameter), py.SRCALPHA)
         self.redraw()

@@ -4,8 +4,8 @@ from pytmx import load_pygame
 class Tile(py.sprite.Sprite):
     """ Класс Плиток карты """
     def __init__(self, pos, surf, groups, scale, tile_size):
-        self.tile_size = tile_size
         super().__init__(groups)
+        self.tile_size = tile_size
         self.image = py.transform.scale(surf, (int(surf.get_width() * scale), int(surf.get_height() * scale)))
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox = self.rect
@@ -22,6 +22,7 @@ class Map:
     def load_map(self):
         """ Загрузка карты """
         map = load_pygame(self.tmx_path)
+
         # Загрузка Тайлов
         for layer in map.visible_layers:
             if hasattr(layer, 'data'):
@@ -36,6 +37,7 @@ class Map:
 
     def draw(self, screen):
         """ Отрисовка всей карты """
+
         # Tайлы
         for tile in self.tile_group:
             screen.blit(tile.image, (tile.rect.x, tile.rect.y))
