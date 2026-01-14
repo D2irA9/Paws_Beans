@@ -55,6 +55,9 @@ class CircleButton:
         self.redraw()
         self.rect = self.image.get_rect(center=pos)
 
+        self.visible = True
+        self.was_clicked = False
+
     def redraw(self):
         """ Перерисовка кнопки """
         diameter = self.radius * 2
@@ -75,3 +78,8 @@ class CircleButton:
         """ Получение сигнала"""
         distance = ((pos[0] - self.rect.centerx) ** 2 + (pos[1] - self.rect.centery) ** 2) ** 0.5
         return  distance <= self.radius
+
+    def set_visible(self, visible):
+        """ Установить видимость кнопки """
+        self.visible = visible
+        self.redraw()
