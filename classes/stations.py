@@ -67,33 +67,36 @@ class BrewStation(Station):
     def __init__(self):
         super().__init__("Приготовление", ORANGE_fon, ORANGE)
 
-        # Кнопки станции
-        self.milk = CircleButton(30, WHITE, (350, 200))
-        self.bt_skimmed_milk = CircleButton(30, WHITE, (410, 160))
-        self.bt_strawberry_milk = CircleButton(30, ORANGE_fon, (410, 240))
-
-        self.espresso = CircleButton(30, (110, 59, 9), (350, 450))
-        self.bt_city_roast = CircleButton(30, BLUE, (410, 410))
-        self.bt_decaf_roast = CircleButton(30, ORANGE, (410, 490))
-
-        # Состояния
-        self.milk_sub_visible = False
-        self.espresso_sub_visible = False
-
-        # Выбранные ингредиенты
-        self.selected_milk = None
-        self.selected_espresso = None
+        self.cells = []
+        self.cells_pos = [(0, 75), (300, 75), (600, 75), (900, 75)]
+        for i, (x, y) in enumerate(self.cells_pos):
+            cell = {
+                "id": i,
+                "x": x,
+                "y": y,
+                "milk": CircleButton(30, WHITE, (x + 150, y +125)),
+                "espresso": CircleButton(30, (110, 59, 9), (x + 150, y + 375)),
+                "selected_milk": None,
+                "selected_ecpresso": None
+            }
+            self.cells.append(cell)
 
     def draw(self, screen):
         """ Отрисовка станции приготовления """
         screen.fill(self.bg_color)
-        py.draw.rect(screen, ORANGE1, (200, 75, 300, 500))
+        for cell in self.cells:
+            py.draw.rect(screen, ORANGE1, (cell["x"], cell["y"], 300, 500))
+            py.draw.rect(screen, CONTOUR, (cell["x"], cell["y"], 300, 500), 3)
 
-        self.milk.draw(screen)
-        self.espresso.draw(screen)
+            cell["milk"].draw(screen)
+            cell["espresso"].draw(screen)
 
     def events(self, events):
         """ Обработка событий на станции приготовления """
+        for event in events:
+            if event.type == py.MOUSEBUTTONDOWN:
+                pass
+                # Молоко
         return None
 
 class BuildStation(Station):

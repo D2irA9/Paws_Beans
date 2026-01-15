@@ -83,3 +83,7 @@ class CircleButton:
         """ Установить видимость кнопки """
         self.visible = visible
         self.redraw()
+
+    def set_pos(self, pos):
+        """ Изменение положение """
+        self.pos = pos
