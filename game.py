@@ -10,7 +10,6 @@ def game(events):
         if event.type == py.QUIT:
             py.quit()
             sys.exit()
-        elif event.type == py.MOUSEBUTTONDOWN:
-            station_manager.handle_events(events)
+    station_manager.handle_events(events)
 
     station_manager.draw(screen)

@@ -10,21 +10,24 @@ py.display.set_caption('Paws & Beans')
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GRAY = (128, 128, 128)
-
+RED = (225, 0, 0)
 ORANGE = (255,165,0)
 ORANGE1 = (255, 228, 179)
 ORANGE_fon = (238, 144, 51)
-
 GREEN = (76,187,23)
 GREEN1 = (172, 241, 138)
-
 BLUE = (66,170,255)
 BLUE1 = (189, 226, 255)
-
 VIOLET = (153,50,204)
 VIOLET1 = (218, 181, 237)
-
 CONTOUR = (58, 58, 80)
+
+# Молоко
+SKIM_MILK = (231, 219, 220)
+STRAWBERRY_MILK = (228, 172, 195)
+# Эспрессо
+CITY_ROAST = (110, 59, 9)
+DECAF_ROAST = (70, 39, 6)
 
 # # # Переменные
 font = Label('assets/font/PixelizerBold.ttf')
