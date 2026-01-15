@@ -62,6 +62,7 @@ class OrderStation(Station):
         """ Обработка событий на станции """
         pass
 
+
 class BrewStation(Station):
     """ Станция приготовления кофе """
     def __init__(self):
@@ -72,10 +73,24 @@ class BrewStation(Station):
 
         # Цвета для кнопок молока
         self.milk_colors = {
-            "SKIM_MILK" : WHITE,
+            "SKIM_MILK": WHITE,
             "back": RED,
             "STRAWBERRY_MILK": STRAWBERRY_MILK,
         }
+
+        # Цвета холодное и горячее
+        self.milk_level2_colors = {
+            "cold": BLUE,
+            "hot": RED,
+        }
+
+        # Цвета выбор количества порций
+        self.milk_level3_colors = {
+            "1": GREEN,
+            "2": BLUE,
+            "3": ORANGE,
+        }
+
         # Цвета для кнопок эспрессо
         self.espresso_colors = {
             "CITY_ROAST": CITY_ROAST,
@@ -90,29 +105,71 @@ class BrewStation(Station):
                 "y": y,
                 "main_milk": CircleButton(30, WHITE, (x + 150, y + 125)),
                 "main_espresso": CircleButton(30, (110, 59, 9), (x + 150, y + 375)),
-                "show_milk_menu": False,
+
+                # Уровни меню
+                "milk_menu_level": 0,
                 "show_espresso_menu": False,
-                "milk_buttons": [],
+
+                # Кнопки для каждого уровня
+                "milk_level1_buttons": [],
+                "milk_level2_buttons": [],
+                "milk_level3_buttons": [],
                 "espresso_buttons": [],
-                "selected_milk": None,
-                "selected_espresso": None
+
+                # Выбранные значения
+                "selected_milk_type": None,
+                "selected_milk_temp": None,
+                "selected_milk_amount": None,
+                "selected_espresso": None,
             }
 
-            milk_button_positions = [
+            # Уровень 1(выбор типа молока)
+            milk_level1_positions = [
                 (x + 150, y + 125),
                 (x + 150, y + 250),
                 (x + 150, y + 375),
             ]
 
-            for j, (btn_x, btn_y) in enumerate(milk_button_positions):
+            for j, (btn_x, btn_y) in enumerate(milk_level1_positions):
                 milk_types = list(self.milk_colors.keys())
                 milk_type = milk_types[j]
-                btn = CircleButton(25, self.milk_colors[milk_type], (btn_x, btn_y))
-                btn.milk_type = milk_type
+                btn = CircleButton(25, self.milk_colors[milk_type], (btn_x, btn_y), text="")
+                btn.value = milk_type
                 btn.visible = False
-                cell["milk_buttons"].append(btn)
+                cell["milk_level1_buttons"].append(btn)
 
+            # Уровень 2(выбор температуры молока)
+            milk_level2_positions = [
+                (x + 150, y + 175),
+                (x + 150, y + 325),
+            ]
 
+            for j, (btn_x, btn_y) in enumerate(milk_level2_positions):
+                temp_types = ["cold", "hot"]
+                temp_type = temp_types[j]
+                color = self.milk_level2_colors[temp_type]
+                text = "Х" if temp_type == "cold" else "Г"
+                btn = CircleButton(25, color, (btn_x, btn_y), text=text)
+                btn.value = temp_type
+                btn.visible = False
+                cell["milk_level2_buttons"].append(btn)
+
+            # Уровень 3(выбор количества порций)
+            milk_level3_positions = [
+                (x + 150, y + 125),
+                (x + 150, y + 250),
+                (x + 150, y + 375),
+            ]
+
+            for j, (btn_x, btn_y) in enumerate(milk_level3_positions):
+                amount = str(j + 1)
+                color = self.milk_level3_colors[amount]
+                btn = CircleButton(25, color, (btn_x, btn_y), text=amount)
+                btn.value = amount
+                btn.visible = False
+                cell["milk_level3_buttons"].append(btn)
+
+            # Кнопки для эспрессо
             espresso_button_positions = [
                 (x + 150, y + 120),
                 (x + 150, y + 250),
@@ -137,16 +194,30 @@ class BrewStation(Station):
             py.draw.rect(screen, CONTOUR, (cell["x"], cell["y"], 300, 500), 3)
 
             # Если ни одно меню не открыто и компоненты не выбраны
-            if not cell["show_milk_menu"] and not cell["show_espresso_menu"] and \
-               not cell["selected_milk"] and not cell["selected_espresso"]:
+            if cell["milk_menu_level"] == 0 and not cell["show_espresso_menu"] and \
+                    not cell["selected_milk_type"] and not cell["selected_espresso"]:
                 cell["main_milk"].draw(screen)
                 cell["main_espresso"].draw(screen)
-            # Если открыто меню молока
-            elif cell["show_milk_menu"]:
-                for btn in cell["milk_buttons"]:
+
+            # Уровень 1
+            elif cell["milk_menu_level"] == 1:
+                for btn in cell["milk_level1_buttons"]:
                     if btn.visible:
                         btn.draw(screen)
-            # Если открыто меню эспрессо
+
+            # Уровень 2
+            elif cell["milk_menu_level"] == 2:
+                for btn in cell["milk_level2_buttons"]:
+                    if btn.visible:
+                        btn.draw(screen)
+
+            # Уровень 3
+            elif cell["milk_menu_level"] == 3:
+                for btn in cell["milk_level3_buttons"]:
+                    if btn.visible:
+                        btn.draw(screen)
+
+            # Меню эспрессо
             elif cell["show_espresso_menu"]:
                 for btn in cell["espresso_buttons"]:
                     if btn.visible:
@@ -157,80 +228,96 @@ class BrewStation(Station):
         for event in events:
             if event.type == py.MOUSEBUTTONDOWN:
                 for cell in self.cells:
-
-                    # Если открыто меню молока
-                    if cell["show_milk_menu"]:
-                        for btn in cell["milk_buttons"]:
+                    # Уровень 1
+                    if cell["milk_menu_level"] == 1:
+                        for btn in cell["milk_level1_buttons"]:
                             if btn.signal(event.pos):
-                                if btn.milk_type == "back":
-                                    print(f"Ячейка {cell['id']}: возврат из меню молока")
-                                    cell["show_milk_menu"] = False
-                                    cell["show_espresso_menu"] = False
-                                    # Скрываем все кнопки меню
-                                    for milk_btn in cell["milk_buttons"]:
+                                if btn.value == "back":
+                                    cell["milk_menu_level"] = 0
+                                    for milk_btn in cell["milk_level1_buttons"]:
                                         milk_btn.visible = False
-                                    for espresso_btn in cell["espresso_buttons"]:
-                                        espresso_btn.visible = False
                                 else:
-                                    cell["selected_milk"] = btn.milk_type
-                                    milk_name = "Обезжиренное молоко" if btn.milk_type == "SKIM_MILK" else "Клубничное молоко"
-                                    print(f"Ячейка {cell['id']}: выбрано {milk_name}")
+                                    cell["selected_milk_type"] = btn.value
 
-                    # Если открыто меню эспрессо
+                                    # Переход на уровень 2
+                                    cell["milk_menu_level"] = 2
+                                    for milk_btn in cell["milk_level1_buttons"]:
+                                        milk_btn.visible = False
+                                    for temp_btn in cell["milk_level2_buttons"]:
+                                        temp_btn.visible = True
+
+                    # Уровень 2
+                    elif cell["milk_menu_level"] == 2:
+                        for btn in cell["milk_level2_buttons"]:
+                            if btn.signal(event.pos):
+                                cell["selected_milk_temp"] = btn.value
+
+                                # Переход на уровень 3
+                                cell["milk_menu_level"] = 3
+                                for temp_btn in cell["milk_level2_buttons"]:
+                                    temp_btn.visible = False
+                                for amount_btn in cell["milk_level3_buttons"]:
+                                    amount_btn.visible = True
+
+                    # Уровень 3
+                    elif cell["milk_menu_level"] == 3:
+                        for btn in cell["milk_level3_buttons"]:
+                            if btn.signal(event.pos):
+                                cell["selected_milk_amount"] = btn.value
+                                cell["milk_menu_level"] = 0
+                                for amount_btn in cell["milk_level3_buttons"]:
+                                    amount_btn.visible = False
+
+                                print(f"id: {cell['id']}"
+                                      f"молок: {cell['selected_milk_type']}, "
+                                      f"т: {cell['selected_milk_temp']}, "
+                                      f"кол: {cell['selected_milk_amount']}")
+
+                    # Меню эспрессо
                     elif cell["show_espresso_menu"]:
                         for btn in cell["espresso_buttons"]:
                             if btn.signal(event.pos):
                                 if btn.espresso_type == "back":
-                                    print(f"Ячейка {cell['id']}: возврат из меню эспрессо")
-                                    cell["show_milk_menu"] = False
                                     cell["show_espresso_menu"] = False
-                                    # Скрываем все кнопки меню
-                                    for milk_btn in cell["milk_buttons"]:
-                                        milk_btn.visible = False
                                     for espresso_btn in cell["espresso_buttons"]:
                                         espresso_btn.visible = False
                                 else:
-                                    # Выбрали тип эспрессо
                                     cell["selected_espresso"] = btn.espresso_type
-                                    coffee_name = "Городское жаркое" if btn.espresso_type == "CITY_ROAST" else "Жаркое без кофеина"
-                                    print(f"Ячейка {cell['id']}: выбрано {coffee_name}")
 
-                    # Если меню не открыты
+                    # Основное
                     else:
-                        if cell["selected_milk"] and cell["main_milk"].signal(event.pos):
-                            print(f"Ячейка {cell['id']}: открыто меню молока (уже выбрано: {cell['selected_milk']})")
-                            cell["show_milk_menu"] = True
+                        if cell["main_milk"].signal(event.pos):
+                            if cell["selected_milk_type"]:
+                                cell["selected_milk_type"] = None
+                                cell["selected_milk_temp"] = None
+                                cell["selected_milk_amount"] = None
+                            cell["milk_menu_level"] = 1
                             cell["show_espresso_menu"] = False
-                            for btn in cell["milk_buttons"]:
+
+                            # Кнопки уровня 1
+                            for btn in cell["milk_level1_buttons"]:
                                 btn.visible = True
+                            for btn in cell["milk_level2_buttons"]:
+                                btn.visible = False
+                            for btn in cell["milk_level3_buttons"]:
+                                btn.visible = False
                             for btn in cell["espresso_buttons"]:
                                 btn.visible = False
 
-                        elif cell["selected_espresso"] and cell["main_espresso"].signal(event.pos):
-                            print(f"Ячейка {cell['id']}: открыто меню эспрессо (уже выбрано: {cell['selected_espresso']})")
+                        # Клик по эспрессо
+                        elif cell["main_espresso"].signal(event.pos):
+                            print(f"{cell['id']}: открыто меню эспрессо")
                             cell["show_espresso_menu"] = True
-                            cell["show_milk_menu"] = False
-                            for btn in cell["espresso_buttons"]:
-                                btn.visible = True
-                            for btn in cell["milk_buttons"]:
-                                btn.visible = False
+                            cell["milk_menu_level"] = 0
 
-                        elif not cell["selected_milk"] and cell["main_milk"].signal(event.pos):
-                            print(f"Ячейка {cell['id']}: открыто меню молока")
-                            cell["show_milk_menu"] = True
-                            cell["show_espresso_menu"] = False
-                            for btn in cell["milk_buttons"]:
-                                btn.visible = True
                             for btn in cell["espresso_buttons"]:
-                                btn.visible = False
+                                btn.visible = True
 
-                        elif not cell["selected_espresso"] and cell["main_espresso"].signal(event.pos):
-                            print(f"Ячейка {cell['id']}: открыто меню эспрессо")
-                            cell["show_espresso_menu"] = True
-                            cell["show_milk_menu"] = False
-                            for btn in cell["espresso_buttons"]:
-                                btn.visible = True
-                            for btn in cell["milk_buttons"]:
+                            for btn in cell["milk_level1_buttons"]:
+                                btn.visible = False
+                            for btn in cell["milk_level2_buttons"]:
+                                btn.visible = False
+                            for btn in cell["milk_level3_buttons"]:
                                 btn.visible = False
 
 class BuildStation(Station):
