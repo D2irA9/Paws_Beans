@@ -115,6 +115,7 @@ class BrewStation(Station):
                 "milk_level2_buttons": [],
                 "espresso_type_buttons": [],  # Уровень 1: выбор типа
                 "espresso_portion_buttons": [],  # Уровень 2: выбор порции
+                "roast_stop_button":  Button(150, 40, BLUE, (x + 75, y + 450)),
 
                 # Кнопка наливки
                 "pour_button": None,
@@ -446,6 +447,8 @@ class BrewStation(Station):
         py.draw.rect(screen, ORANGE1, (x, y, 300, 500))
         py.draw.rect(screen, CONTOUR, (x, y, 300, 500), 3)
 
+        self.draw_roasting(screen, cell)
+
         # Темный прямоугольник для стакана
         dark_rect_y = y + 80
         dark_rect_height = 300
@@ -492,6 +495,60 @@ class BrewStation(Station):
         stem_x = glass_x + (glass_width - stem_width) // 2
         stem_y = glass_y + glass_height
         py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
+
+    def draw_roasting(self, screen, cell):
+        """ Отображение мини-игра """
+        x, y = cell["x"], cell["y"]
+
+        # Позиция
+        timer_y = y + 20
+        timer_height = 40
+        timer_width = 260
+
+        # Фон
+        py.draw.rect(screen, (80, 80, 80), (x + 20, timer_y, timer_width, timer_height))
+
+        # Зеленая зона
+        zone_start = 45
+        zone_end = 55
+
+        # Сохраняем зону в ячейке
+        cell["ideal_zone_start"] = zone_start
+        cell["ideal_zone_end"] = zone_end
+
+        # Рисуем зеленую зону
+        zone_width = zone_end - zone_start
+        zone_x = x + 20 + int(timer_width * (zone_start / 100))
+        zone_w = int(timer_width * (zone_width / 100))
+        py.draw.rect(screen, GREEN, (zone_x, timer_y, zone_w, timer_height))
+
+        # Рассчитываем позицию ползунка
+        if "roast_slider_progress" not in cell:
+            cell["roast_slider_progress"] = 0
+            cell["roast_slider_direction"] = 1
+            cell["roast_slider_speed"] = 0.5
+
+        # Обновляем позицию ползунка
+        cell["roast_slider_progress"] += cell["roast_slider_direction"] * cell["roast_slider_speed"]
+
+        # Меняем направление при достижении границ
+        if cell["roast_slider_progress"] >= 95:
+            cell["roast_slider_progress"] = 95
+            cell["roast_slider_direction"] = -1
+        elif cell["roast_slider_progress"] <= 0:
+            cell["roast_slider_progress"] = 0
+            cell["roast_slider_direction"] = 1
+
+        # Рисуем желтый ползунок
+        slider_x = x + 20 + int(timer_width * (cell["roast_slider_progress"] / 100))
+        slider_width = 10
+        slider_height = timer_height
+        py.draw.rect(screen, YELLOW, (slider_x, timer_y, slider_width, slider_height))
+        py.draw.rect(screen, (200, 180, 0), (slider_x, timer_y, slider_width, slider_height), 2)
+
+        # Контур таймера
+        py.draw.rect(screen, (40, 40, 40), (x + 20, timer_y, timer_width, timer_height), 3)
+        cell["roast_stop_button"].draw(screen)
 
     def draw_whisk_timer(self, screen, cell):
         """ Отрисовка таймера взбивания """
