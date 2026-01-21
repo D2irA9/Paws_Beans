@@ -125,7 +125,7 @@ class BrewStation(Station):
                 # Выбранные значения
                 "selected_milk_type": None,
                 "selected_milk_temp": None,
-                "selected_espresso": None,
+                "selected_espresso_type": None,
                 "selected_espresso_portion": 1,  # По умолчанию 1 порция
 
                 # Состояние процесса
@@ -236,15 +236,17 @@ class BrewStation(Station):
             elif cell["milk_menu_level"] == 2:
                 self.draw_milk_level2(screen, cell)
             elif cell["milk_menu_level"] == 3:
-                self.draw_pour_level(screen, cell)
+                self.draw_milk_level3(screen, cell)
             elif cell["milk_menu_level"] == 4:
-                self.draw_whisk_level(screen, cell)
+                self.draw_milk_level4(screen, cell)
 
             # Уровни эспрессо
             elif cell["espresso_menu_level"] == 1:
-                self.draw_espresso_type_level(screen, cell)
+                self.draw_espresso_level1(screen, cell)
             elif cell["espresso_menu_level"] == 2:
-                self.draw_espresso_portion_level(screen, cell)
+                self.draw_espresso_level2(screen, cell)
+            elif cell["espresso_menu_level"] == 3:
+                self.draw_espresso_level3(screen, cell)
 
     def draw_milk_level1(self, screen, cell):
         """ Отрисовка уровня 1 молока: выбор типа молока """
@@ -268,33 +270,7 @@ class BrewStation(Station):
             if btn.visible:
                 btn.draw(screen)
 
-    def draw_espresso_type_level(self, screen, cell):
-        """ Отрисовка уровня 1 эспрессо: выбор типа """
-        x, y = cell["x"], cell["y"]
-
-        # Рисуем фон
-        py.draw.rect(screen, ORANGE1, (x, y, 300, 500))
-        py.draw.rect(screen, CONTOUR, (x, y, 300, 500), 3)
-
-        # Рисуем кнопки
-        for btn in cell["espresso_type_buttons"]:
-            if btn.visible:
-                btn.draw(screen)
-
-    def draw_espresso_portion_level(self, screen, cell):
-        """ Отрисовка уровня 2 эспрессо: выбор порции """
-        x, y = cell["x"], cell["y"]
-
-        # Рисуем фон
-        py.draw.rect(screen, ORANGE1, (x, y, 300, 500))
-        py.draw.rect(screen, CONTOUR, (x, y, 300, 500), 3)
-
-        # Рисуем кнопки порций
-        for btn in cell["espresso_portion_buttons"]:
-            if btn.visible:
-                btn.draw(screen)
-
-    def draw_pour_level(self, screen, cell):
+    def draw_milk_level3(self, screen, cell):
         """ Отрисовка уровня 3: наливка молока """
         x, y = cell["x"], cell["y"]
 
@@ -364,21 +340,7 @@ class BrewStation(Station):
         if cell["pour_button"] and cell["pour_button"].visible:
             cell["pour_button"].draw(screen)
 
-        # Инструкция
-        instruction_y = y + 420
-        font = py.font.Font(None, 22)
-        if cell["is_pouring"]:
-            instruction = font.render("Держите для наливания...", True, WHITE)
-        else:
-            instruction = font.render("Нажмите и держите кнопку", True, WHITE)
-        screen.blit(instruction, (x + 60, instruction_y))
-
-        # Индикатор порций
-        portions_font = py.font.Font(None, 20)
-        portions_text = portions_font.render(f"Порций: {cell['portions_poured']}/4", True, WHITE)
-        screen.blit(portions_text, (x + 20, y + 20))
-
-    def draw_whisk_level(self, screen, cell):
+    def draw_milk_level4(self, screen, cell):
         """ Отрисовка уровня 4: взбивание молока """
         x, y = cell["x"], cell["y"]
 
@@ -393,10 +355,8 @@ class BrewStation(Station):
         dark_rect_y = y + 80
         dark_rect_height = 300
         darker_orange = (140, 60, 0)
-        py.draw.rect(screen, darker_orange,
-                     (x + 20, dark_rect_y, 260, dark_rect_height))
-        py.draw.rect(screen, CONTOUR,
-                     (x + 20, dark_rect_y, 260, dark_rect_height), 2)
+        py.draw.rect(screen, darker_orange, (x + 20, dark_rect_y, 260, dark_rect_height))
+        py.draw.rect(screen, CONTOUR, (x + 20, dark_rect_y, 260, dark_rect_height), 2)
 
         # Стакан
         glass_width = 120
@@ -448,18 +408,90 @@ class BrewStation(Station):
         stem_height = 15
         stem_x = glass_x + (glass_width - stem_width) // 2
         stem_y = glass_y + glass_height
-        py.draw.rect(screen, (210, 210, 210),
-                     (stem_x, stem_y, stem_width, stem_height))
+        py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
 
         # Кнопка остановки
         if cell["stop_whisk_button"] and cell["stop_whisk_button"].visible:
             cell["stop_whisk_button"].draw(screen)
 
-        # Инструкция
-        instruction_y = y + 420
-        font = py.font.Font(None, 22)
-        instruction = font.render("Нажмите 'Остановить' в зеленой зоне", True, WHITE)
-        screen.blit(instruction, (x + 40, instruction_y))
+    def draw_espresso_level1(self, screen, cell):
+        """ Отрисовка уровня 1 эспрессо: выбор типа """
+        x, y = cell["x"], cell["y"]
+
+        # Рисуем фон
+        py.draw.rect(screen, ORANGE1, (x, y, 300, 500))
+        py.draw.rect(screen, CONTOUR, (x, y, 300, 500), 3)
+
+        # Рисуем кнопки
+        for btn in cell["espresso_type_buttons"]:
+            if btn.visible:
+                btn.draw(screen)
+
+    def draw_espresso_level2(self, screen, cell):
+        """ Отрисовка уровня 2 эспрессо: выбор порции """
+        x, y = cell["x"], cell["y"]
+
+        # Рисуем фон
+        py.draw.rect(screen, ORANGE1, (x, y, 300, 500))
+        py.draw.rect(screen, CONTOUR, (x, y, 300, 500), 3)
+
+        # Рисуем кнопки порций
+        for btn in cell["espresso_portion_buttons"]:
+            if btn.visible:
+                btn.draw(screen)
+
+    def draw_espresso_level3(self, screen, cell):
+        """ Отрисовка уровня 3 эспрессо: мини-игра """
+        x, y = cell["x"], cell["y"]
+        py.draw.rect(screen, ORANGE1, (x, y, 300, 500))
+        py.draw.rect(screen, CONTOUR, (x, y, 300, 500), 3)
+
+        # Темный прямоугольник для стакана
+        dark_rect_y = y + 80
+        dark_rect_height = 300
+        darker_orange = (140, 60, 0)
+        py.draw.rect(screen, darker_orange, (x + 20, dark_rect_y, 260, dark_rect_height))
+        py.draw.rect(screen, CONTOUR, (x + 20, dark_rect_y, 260, dark_rect_height), 2)
+
+        # Стакан
+        glass_width = 120
+        glass_height = 200
+        glass_x = x + (300 - glass_width) // 2
+        glass_y = dark_rect_y + (dark_rect_height - glass_height) // 2
+
+        # Отрисовка стакана с порциями
+        portions = cell["selected_espresso_portion"]
+        max_portions = 3
+        portion_height = glass_height // max_portions
+
+        # Внешний контур стакана
+        glass_color = (240, 240, 240)
+        py.draw.rect(screen, glass_color, (glass_x, glass_y, glass_width, glass_height))
+        py.draw.rect(screen, (200, 200, 200), (glass_x, glass_y, glass_width, glass_height), 3)
+
+        # Разделители порций
+        for i in range(1, max_portions):
+            divider_y = glass_y + i * portion_height
+            py.draw.line(screen, (180, 180, 180), (glass_x, divider_y), (glass_x + glass_width, divider_y), 1)
+
+        # Цвет эспрессо
+        if cell["selected_espresso_type"] == "CITY_ROAST":
+            espresso_color = CITY_ROAST
+        else:
+            espresso_color = DECAF_ROAST
+        # Заполняем все налитые порции
+        for i in range(portions):
+            fill_y = glass_y + glass_height - (i + 1) * portion_height
+            fill_height = portion_height
+            py.draw.rect(screen, espresso_color, (glass_x, fill_y, glass_width, fill_height))
+            py.draw.rect(screen, (220, 220, 220), (glass_x, fill_y, glass_width, fill_height), 1)
+
+        # Ножка стакана
+        stem_width = glass_width // 3
+        stem_height = 15
+        stem_x = glass_x + (glass_width - stem_width) // 2
+        stem_y = glass_y + glass_height
+        py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
 
     def draw_whisk_timer(self, screen, cell):
         """ Отрисовка таймера взбивания """
@@ -507,22 +539,6 @@ class BrewStation(Station):
 
         # Контур таймера
         py.draw.rect(screen, (40, 40, 40), (x + 20, timer_y, timer_width, timer_height), 3)
-
-        # Текст прогресса
-        font = py.font.Font(None, 24)
-        progress_text = font.render(f"{int(cell['whisk_progress'])}%", True, BLACK)
-        text_rect = progress_text.get_rect(center=(x + 150, timer_y + timer_height // 2))
-        screen.blit(progress_text, text_rect)
-
-        # Информация о порциях
-        portions_font = py.font.Font(None, 20)
-        portions_text = portions_font.render(f"Порций: {portions}", True, WHITE)
-        screen.blit(portions_text, (x + 20, timer_y - 25))
-
-        # Подсказка
-        hint_font = py.font.Font(None, 18)
-        hint_text = hint_font.render("Нажмите когда желтый дойдет до зеленого", True, WHITE)
-        screen.blit(hint_text, (x + 30, timer_y + timer_height + 5))
 
     def events(self, events):
         """ Обработка событий на станции приготовления """
@@ -614,7 +630,7 @@ class BrewStation(Station):
                             print(f"Ячейка {cell['id']}: нажата кнопка 'main_espresso' - открыто меню эспрессо")
 
                             # Сброс состояния эспрессо
-                            cell["selected_espresso"] = None
+                            cell["selected_espresso_type"] = None
                             cell["selected_espresso_portion"] = 1
 
                             cell["espresso_menu_level"] = 1
@@ -645,7 +661,7 @@ class BrewStation(Station):
                                         espresso_btn.visible = False
                                 else:
                                     # Сохраняем выбранный тип и переходим к выбору порции
-                                    cell["selected_espresso"] = btn.espresso_type
+                                    cell["selected_espresso_type"] = btn.espresso_type
                                     cell["espresso_menu_level"] = 2
 
                                     # Скрываем кнопки типа
@@ -682,14 +698,14 @@ class BrewStation(Station):
                                     cell["selected_espresso_portion"] = btn.portion
 
                                     # Возвращаемся на основной уровень
-                                    cell["espresso_menu_level"] = 0
+                                    cell["espresso_menu_level"] = 3
 
                                     # Скрываем кнопки порций
                                     for portion_btn in cell["espresso_portion_buttons"]:
                                         portion_btn.visible = False
 
                                     print(f"Ячейка {cell['id']}: выбрано {btn.portion} порций эспрессо")
-                                    print(f"  Тип: {cell['selected_espresso']}")
+                                    print(f"  Тип: {cell['selected_espresso_type']}")
                                     print(f"  Порций: {cell['selected_espresso_portion']}")
 
             # Отпускание кнопки мыши
