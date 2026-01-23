@@ -62,7 +62,6 @@ class OrderStation(Station):
         """ Обработка событий на станции """
         pass
 
-
 class BrewStation(Station):
     """ Станция приготовления кофе """
     def __init__(self):
@@ -113,9 +112,10 @@ class BrewStation(Station):
                 # Кнопки для каждого уровня
                 "milk_level1_buttons": [],
                 "milk_level2_buttons": [],
-                "espresso_type_buttons": [],  # Уровень 1: выбор типа
-                "espresso_portion_buttons": [],  # Уровень 2: выбор порции
-                "roast_stop_button":  Button(150, 40, BLUE, (x + 75, y + 450)),
+                "espresso_type_buttons": [],
+                "espresso_portion_buttons": [],
+                "espresso_stop_button": Button(150, 40, BLUE, (x + 75, y + 450)),  # Кнопка остановки ползунка
+                "espresso_start_button": Button(150, 40, GREEN, (x + 75, y + 400)),  # Кнопка начала обжарки
 
                 # Кнопка наливки
                 "pour_button": None,
@@ -127,7 +127,7 @@ class BrewStation(Station):
                 "selected_milk_type": None,
                 "selected_milk_temp": None,
                 "selected_espresso_type": None,
-                "selected_espresso_portion": 1,  # По умолчанию 1 порция
+                "selected_espresso_portion": 1,
 
                 # Состояние процесса
                 "is_pouring": False,
@@ -140,6 +140,17 @@ class BrewStation(Station):
                 "portions_poured": 0,
                 "ideal_zone_start": 45,
                 "ideal_zone_end": 55,
+
+                # Новые свойства для мини-игры эспрессо
+                "roast_slider_stopped": False,
+                "roast_slider_direction": 1,
+                # УВЕЛИЧЕНА СКОРОСТЬ с 0.5 до 1.2
+                "roast_slider_speed": 1.2,
+                "roast_target_progress": 0,
+                "is_roasting": False,
+                "roast_progress": 0,
+                "roast_slider_progress": 0,
+                "roast_start_time": 0,
             }
 
             # Уровень 1 (Молоко)
@@ -202,12 +213,12 @@ class BrewStation(Station):
 
             # Кнопки для порций эспрессо (уровень 2)
             espresso_portion_positions = [
-                (x + 150, y + 120),  # 1 порция
-                (x + 150, y + 250),  # 2 порции
-                (x + 150, y + 375),  # 3 порции
+                (x + 150, y + 120),
+                (x + 150, y + 250),
+                (x + 150, y + 375),
             ]
             for j, (btn_x, btn_y) in enumerate(espresso_portion_positions):
-                if j < 3:  # Первые 3 кнопки - порции
+                if j < 3:
                     portion = j + 1
                     btn = CircleButton(25, self.portion_colors[portion], (btn_x, btn_y), text=str(portion))
                     btn.portion = portion
@@ -216,6 +227,7 @@ class BrewStation(Station):
                     cell["espresso_portion_buttons"].append(btn)
 
             self.cells.append(cell)
+            self.build_station = None
 
     def draw(self, screen):
         """ Отрисовка станции приготовления """
@@ -248,6 +260,8 @@ class BrewStation(Station):
                 self.draw_espresso_level2(screen, cell)
             elif cell["espresso_menu_level"] == 3:
                 self.draw_espresso_level3(screen, cell)
+            elif cell["espresso_menu_level"] == 4:
+                self.draw_espresso_level4(screen, cell)
 
     def draw_milk_level1(self, screen, cell):
         """ Отрисовка уровня 1 молока: выбор типа молока """
@@ -283,10 +297,8 @@ class BrewStation(Station):
         dark_rect_y = y + 50
         dark_rect_height = 300
         darker_orange = (140, 60, 0)
-        py.draw.rect(screen, darker_orange,
-                     (x + 20, dark_rect_y, 260, dark_rect_height))
-        py.draw.rect(screen, CONTOUR,
-                     (x + 20, dark_rect_y, 260, dark_rect_height), 2)
+        py.draw.rect(screen, darker_orange, (x + 20, dark_rect_y, 260, dark_rect_height))
+        py.draw.rect(screen, CONTOUR, (x + 20, dark_rect_y, 260, dark_rect_height), 2)
 
         # Стакан
         glass_width = 120
@@ -306,8 +318,7 @@ class BrewStation(Station):
         # Разделители порций
         for i in range(1, max_portions):
             divider_y = glass_y + i * portion_height
-            py.draw.line(screen, (180, 180, 180),
-                         (glass_x, divider_y), (glass_x + glass_width, divider_y), 1)
+            py.draw.line(screen, (180, 180, 180), (glass_x, divider_y), (glass_x + glass_width, divider_y), 1)
 
         # Заливаем заполненные порции
         for i in range(max_portions):
@@ -334,8 +345,7 @@ class BrewStation(Station):
         stem_height = 15
         stem_x = glass_x + (glass_width - stem_width) // 2
         stem_y = glass_y + glass_height
-        py.draw.rect(screen, (210, 210, 210),
-                     (stem_x, stem_y, stem_width, stem_height))
+        py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
 
         # Кнопка наливки
         if cell["pour_button"] and cell["pour_button"].visible:
@@ -378,8 +388,7 @@ class BrewStation(Station):
         # Разделители порций
         for i in range(1, max_portions):
             divider_y = glass_y + i * portion_height
-            py.draw.line(screen, (180, 180, 180),
-                         (glass_x, divider_y), (glass_x + glass_width, divider_y), 1)
+            py.draw.line(screen, (180, 180, 180), (glass_x, divider_y), (glass_x + glass_width, divider_y), 1)
 
         # Цвет молока
         if cell["selected_milk_type"] == "SKIM_MILK":
@@ -447,7 +456,7 @@ class BrewStation(Station):
         py.draw.rect(screen, ORANGE1, (x, y, 300, 500))
         py.draw.rect(screen, CONTOUR, (x, y, 300, 500), 3)
 
-        self.draw_roasting(screen, cell)
+        self.draw_mini_game(screen, cell)
 
         # Темный прямоугольник для стакана
         dark_rect_y = y + 80
@@ -496,8 +505,97 @@ class BrewStation(Station):
         stem_y = glass_y + glass_height
         py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
 
-    def draw_roasting(self, screen, cell):
-        """ Отображение мини-игра """
+        # Отрисовка кнопок
+        if not cell.get("roast_slider_stopped", False):
+            # Если ползунок еще не остановлен - кнопка "СТОП"
+            cell["espresso_stop_button"].draw(screen)
+            cell["espresso_start_button"].visible = False
+        else:
+            # Если ползунок остановлен - кнопка "НАЧАТЬ ОБЖАРКУ"
+            cell["espresso_start_button"].draw(screen)
+            cell["espresso_stop_button"].visible = False
+
+    def draw_espresso_level4(self, screen, cell):
+        """ Отрисовка уровня 4 эспрессо: процесс обжарки """
+        x, y = cell["x"], cell["y"]
+        py.draw.rect(screen, ORANGE1, (x, y, 300, 500))
+        py.draw.rect(screen, CONTOUR, (x, y, 300, 500), 3)
+
+        # Таймер обжарки
+        self.draw_roast_timer(screen, cell)
+
+        dark_rect_y = y + 80
+        dark_rect_height = 300
+        darker_orange = (140, 60, 0)
+        py.draw.rect(screen, darker_orange, (x + 20, dark_rect_y, 260, dark_rect_height))
+        py.draw.rect(screen, CONTOUR, (x + 20, dark_rect_y, 260, dark_rect_height), 2)
+
+        # Стакан
+        glass_width = 120
+        glass_height = 200
+        glass_x = x + (300 - glass_width) // 2
+        glass_y = dark_rect_y + (dark_rect_height - glass_height) // 2
+
+        # Отрисовка стакана с порциями
+        portions = cell["selected_espresso_portion"]
+        max_portions = 3
+        portion_height = glass_height // max_portions
+
+        # Внешний контур стакана
+        glass_color = (240, 240, 240)
+        py.draw.rect(screen, glass_color, (glass_x, glass_y, glass_width, glass_height))
+        py.draw.rect(screen, (200, 200, 200), (glass_x, glass_y, glass_width, glass_height), 3)
+
+        # Разделители порций
+        for i in range(1, max_portions):
+            divider_y = glass_y + i * portion_height
+            py.draw.line(screen, (180, 180, 180), (glass_x, divider_y), (glass_x + glass_width, divider_y), 1)
+
+        # Цвет эспрессо
+        if cell["selected_espresso_type"] == "CITY_ROAST":
+            espresso_color = CITY_ROAST
+        else:
+            espresso_color = DECAF_ROAST
+
+        # Заполняем все налитые порции
+        for i in range(portions):
+            fill_y = glass_y + glass_height - (i + 1) * portion_height
+            fill_height = portion_height
+            py.draw.rect(screen, espresso_color, (glass_x, fill_y, glass_width, fill_height))
+            py.draw.rect(screen, (220, 220, 220), (glass_x, fill_y, glass_width, fill_height), 1)
+
+        # Ножка стакана
+        stem_width = glass_width // 3
+        stem_height = 15
+        stem_x = glass_x + (glass_width - stem_width) // 2
+        stem_y = glass_y + glass_height
+        py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
+
+    def finish_pouring(self, cell):
+        """ Завершение наливки и переход к взбиванию """
+        portions = cell["portions_poured"]
+        print(f"Ячейка {cell['id']}: налито {portions} порций")
+
+        # Переход на уровень 4 (взбивание)
+        cell["milk_menu_level"] = 4
+
+        # Скрываем кнопку наливки
+        if cell["pour_button"]:
+            cell["pour_button"].visible = False
+        if cell["stop_whisk_button"]:
+            cell["stop_whisk_button"].visible = True
+
+        # Запускаем взбивание
+        cell["is_whisking"] = True
+        cell["whisk_start_time"] = py.time.get_ticks()
+        cell["whisk_progress"] = 0
+
+        # Определяем время взбивания
+        print(f"Ячейка {cell['id']}: начато взбивание для {portions} порций")
+        print(f"  Идеальная зона: {cell['ideal_zone_start']}-{cell['ideal_zone_end']}%")
+
+    def draw_mini_game(self, screen, cell):
+        """ Отображение мини-игры """
         x, y = cell["x"], cell["y"]
 
         # Позиция
@@ -508,47 +606,51 @@ class BrewStation(Station):
         # Фон
         py.draw.rect(screen, (80, 80, 80), (x + 20, timer_y, timer_width, timer_height))
 
-        # Зеленая зона
-        zone_start = 45
-        zone_end = 55
+        portions = cell.get("selected_espresso_portion", 1)
+        if portions == 1:
+            zone_start = 40
+            zone_end = 50
+        elif portions == 2:
+            zone_start = 60
+            zone_end = 70
+        else:
+            zone_start = 80
+            zone_end = 90
 
         # Сохраняем зону в ячейке
         cell["ideal_zone_start"] = zone_start
         cell["ideal_zone_end"] = zone_end
 
-        # Рисуем зеленую зону
         zone_width = zone_end - zone_start
         zone_x = x + 20 + int(timer_width * (zone_start / 100))
         zone_w = int(timer_width * (zone_width / 100))
         py.draw.rect(screen, GREEN, (zone_x, timer_y, zone_w, timer_height))
 
-        # Рассчитываем позицию ползунка
-        if "roast_slider_progress" not in cell:
-            cell["roast_slider_progress"] = 0
-            cell["roast_slider_direction"] = 1
-            cell["roast_slider_speed"] = 0.5
+        # Обновляем позицию ползунка если он не остановлен
+        if not cell.get("roast_slider_stopped", False):
+            cell["roast_slider_progress"] += cell["roast_slider_direction"] * cell["roast_slider_speed"]
 
-        # Обновляем позицию ползунка
-        cell["roast_slider_progress"] += cell["roast_slider_direction"] * cell["roast_slider_speed"]
+            # Меняем направление при достижении границ
+            if cell["roast_slider_progress"] >= 95:
+                cell["roast_slider_progress"] = 95
+                cell["roast_slider_direction"] = -1
+            elif cell["roast_slider_progress"] <= 0:
+                cell["roast_slider_progress"] = 0
+                cell["roast_slider_direction"] = 1
 
-        # Меняем направление при достижении границ
-        if cell["roast_slider_progress"] >= 95:
-            cell["roast_slider_progress"] = 95
-            cell["roast_slider_direction"] = -1
-        elif cell["roast_slider_progress"] <= 0:
-            cell["roast_slider_progress"] = 0
-            cell["roast_slider_direction"] = 1
-
-        # Рисуем желтый ползунок
+        # Рисуем ползунок
         slider_x = x + 20 + int(timer_width * (cell["roast_slider_progress"] / 100))
         slider_width = 10
-        slider_height = timer_height
-        py.draw.rect(screen, YELLOW, (slider_x, timer_y, slider_width, slider_height))
-        py.draw.rect(screen, (200, 180, 0), (slider_x, timer_y, slider_width, slider_height), 2)
+        if zone_start <= cell["roast_slider_progress"] <= zone_end:
+            slider_color = GREEN
+        else:
+            slider_color = YELLOW
+
+        py.draw.rect(screen, slider_color, (slider_x, timer_y, slider_width, timer_height))
+        py.draw.rect(screen, (200, 180, 0), (slider_x, timer_y, slider_width, timer_height), 2)
 
         # Контур таймера
         py.draw.rect(screen, (40, 40, 40), (x + 20, timer_y, timer_width, timer_height), 3)
-        cell["roast_stop_button"].draw(screen)
 
     def draw_whisk_timer(self, screen, cell):
         """ Отрисовка таймера взбивания """
@@ -606,6 +708,8 @@ class BrewStation(Station):
                 self.update_pouring(cell, current_time)
             if cell["is_whisking"]:
                 self.update_whisking(cell, current_time)
+            if cell.get("is_roasting", False):
+                self.update_roasting(cell, current_time)
 
         for event in events:
             if event.type == py.MOUSEBUTTONDOWN:
@@ -683,7 +787,6 @@ class BrewStation(Station):
                                 btn.visible = False
 
                         elif cell["main_espresso"].signal(event.pos):
-                            # Добавлено сообщение в консоль
                             print(f"Ячейка {cell['id']}: нажата кнопка 'main_espresso' - открыто меню эспрессо")
 
                             # Сброс состояния эспрессо
@@ -765,12 +868,137 @@ class BrewStation(Station):
                                     print(f"  Тип: {cell['selected_espresso_type']}")
                                     print(f"  Порций: {cell['selected_espresso_portion']}")
 
+                    # Уровень 3 эспрессо: мини-игра (остановка ползунка)
+                    elif cell["espresso_menu_level"] == 3:
+                        # Кнопка остановки ползунка
+                        if cell["espresso_stop_button"].signal(event.pos) and not cell.get("roast_slider_stopped", False):
+                            zone_start = cell.get("ideal_zone_start", 40)
+                            zone_end = cell.get("ideal_zone_end", 60)
+                            stop_position = cell["roast_slider_progress"]
+
+                            # Определяем целевой прогресс обжарки
+                            if zone_start <= stop_position <= zone_end:
+                                # Если в зеленой зоне - заполняем до конца зеленой зоны
+                                cell["roast_target_progress"] = zone_end
+                                print(f"Ячейка {cell['id']}: ✓ УСПЕХ! Ползунок в зеленой зоне ({stop_position:.1f}%)")
+                            else:
+                                # Если вне зеленой зоны - заполняем до позиции ползунка
+                                cell["roast_target_progress"] = stop_position
+                                print(f"Ячейка {cell['id']}: ✗ ПРОМАХ! Ползунок вне зеленой зоны ({stop_position:.1f}%)")
+
+                            cell["roast_slider_stopped"] = True
+                            cell["roast_slider_stop_position"] = stop_position
+                            print(f"Целевой прогресс обжарки: {cell['roast_target_progress']:.1f}%")
+
+                        # Кнопка начала обжарки (только если ползунок уже остановлен)
+                        elif cell["espresso_start_button"].signal(event.pos) and cell.get("roast_slider_stopped", False):
+                            # Начинаем обжарку
+                            print(f"Ячейка {cell['id']}: начата обжарка эспрессо")
+                            cell["espresso_menu_level"] = 4
+                            cell["is_roasting"] = True
+                            cell["roast_progress"] = 0
+                            cell["roast_start_time"] = current_time
+
             # Отпускание кнопки мыши
             elif event.type == py.MOUSEBUTTONUP:
                 for cell in self.cells:
                     if cell["is_pouring"]:
                         self.finish_pouring(cell)
                         cell["is_pouring"] = False
+
+    def update_roasting(self, cell, current_time):
+        """ Обновление процесса обжарки """
+        if not cell.get("is_roasting", False):
+            return
+
+        if "roast_start_time" not in cell:
+            cell["roast_start_time"] = current_time
+            return
+
+        target_progress = cell.get("roast_target_progress", 0)
+        stop_position = cell.get("roast_slider_stop_position", 0)
+        zone_start = cell.get("ideal_zone_start", 40)
+        zone_end = cell.get("ideal_zone_end", 60)
+
+        # Определяем время обжарки
+        if zone_start <= stop_position <= zone_end:
+            # Если попали в зеленую зону - быстро (2 секунды)
+            roast_time = 2.0
+        else:
+            # Если промахнулись - медленнее (4 секунды)
+            roast_time = 4.0
+
+        # Вычисляем прогресс обжарки
+        elapsed_time = (current_time - cell["roast_start_time"]) / 1000.0
+        progress = min(target_progress, (elapsed_time / roast_time) * 100)
+        cell["roast_progress"] = progress
+
+        # Если достигли цели
+        if progress >= target_progress:
+            quality = "отличное" if zone_start <= stop_position <= zone_end else "среднее"
+            print(f"Ячейка {cell['id']}: эспрессо готово! Качество: {quality}")
+
+            if self.build_station:
+                self.build_station.add_ready_drink(
+                    drink_type="espresso",
+                    espresso_type=cell["selected_espresso_type"],
+                    espresso_quality=quality
+                )
+            else:
+                print("ОШИБКА: BuildStation не подключена!")
+
+            cell["espresso_menu_level"] = 0
+            cell["is_roasting"] = False
+
+            # Сброс всех переменных мини-игры
+            cell["roast_slider_progress"] = 0
+            cell["roast_slider_stopped"] = False
+            cell["roast_slider_direction"] = 1
+            cell["roast_target_progress"] = 0
+            cell["roast_progress"] = 0
+            cell.pop("roast_start_time", None)
+            cell.pop("roast_slider_stop_position", None)
+
+            # Сброс выбора эспрессо
+            cell["selected_espresso_type"] = None
+            cell["selected_espresso_portion"] = 1
+
+    def draw_roast_timer(self, screen, cell):
+        """ Отрисовка таймера обжарки """
+        x, y = cell["x"], cell["y"]
+
+        # Позиция таймера
+        timer_y = y + 20
+        timer_height = 40
+        timer_width = 260
+
+        # Фон таймера
+        py.draw.rect(screen, (80, 80, 80), (x + 20, timer_y, timer_width, timer_height))
+
+        # Заполненная часть
+        fill_width = int(timer_width * (cell["roast_progress"] / 100))
+        py.draw.rect(screen, YELLOW, (x + 20, timer_y, fill_width, timer_height))
+
+        # Целевая отметка
+        target_progress = cell.get("roast_target_progress", 0)
+        if target_progress > 0:
+            target_x = x + 20 + int(timer_width * (target_progress / 100))
+            target_width = 10
+            py.draw.rect(screen, GREEN, (target_x, timer_y, target_width, timer_height))
+
+        # Контур
+        py.draw.rect(screen, (40, 40, 40), (x + 20, timer_y, timer_width, timer_height), 3)
+
+        # Информация о времени
+        if cell.get("is_roasting", False):
+            stop_position = cell.get("roast_slider_stop_position", 0)
+            zone_start = cell.get("ideal_zone_start", 40)
+            zone_end = cell.get("ideal_zone_end", 60)
+
+            if zone_start <= stop_position <= zone_end:
+                time_text = "Быстрая обжарка (2 сек)"
+            else:
+                time_text = "Медленная обжарка (4 сек)"
 
     def update_pouring(self, cell, current_time):
         """ Обновление процесса наливки """
@@ -828,29 +1056,6 @@ class BrewStation(Station):
             self.finish_whisking(cell, missed=True)
             cell["is_whisking"] = False
 
-    def finish_pouring(self, cell):
-        """ Завершение наливки и переход к взбиванию """
-        portions = cell["portions_poured"]
-        print(f"Ячейка {cell['id']}: налито {portions} порций")
-
-        # Переход на уровень 4
-        cell["milk_menu_level"] = 4
-
-        # Скрываем кнопку наливки
-        if cell["pour_button"]:
-            cell["pour_button"].visible = False
-        if cell["stop_whisk_button"]:
-            cell["stop_whisk_button"].visible = True
-
-        # Запускаем взбивание
-        cell["is_whisking"] = True
-        cell["whisk_start_time"] = py.time.get_ticks()
-        cell["whisk_progress"] = 0
-
-        # Определяем время взбивания
-        print(f"Ячейка {cell['id']}: начато взбивание для {portions} порций")
-        print(f"  Идеальная зона: {cell['ideal_zone_start']}-{cell['ideal_zone_end']}%")
-
     def finish_whisking(self, cell, missed=False):
         """ Завершение взбивания """
         progress = cell["whisk_progress"]
@@ -880,16 +1085,232 @@ class BrewStation(Station):
               f"Порций: {portions}, "
               f"Качество взбивания: {quality}")
 
+        # Передача напитка
+        if self.build_station:
+            self.build_station.add_ready_drink(
+                drink_type="milk",
+                milk_type=cell["selected_milk_type"],
+                milk_temp=cell["selected_milk_temp"]
+            )
+        else:
+            print("ОШИБКА: BuildStation не подключена к BrewStation!")
+
 class BuildStation(Station):
     """ Станция сборки """
     def __init__(self):
         super().__init__("Сборка", BLUE1, BLUE)
+        # Список готовых напитков
+        self.ready_drinks = []
+        # Размер ячейки для напитка
+        self.cell_size = 200
+        # Количество ячеек в ряду
+        self.cells_per_row = 5
+        # Отступ между ячейками
+        self.spacing = 10
+
+    def add_ready_drink(self, drink_type, milk_type=None, milk_temp=None, espresso_type=None, espresso_quality=None):
+        """ Добавить готовый напиток на станцию сборки """
+        drink = {
+            "type": drink_type,
+            "milk_type": milk_type,
+            "milk_temp": milk_temp,
+            "espresso_type": espresso_type,
+            "espresso_quality": espresso_quality,
+            "id": len(self.ready_drinks)
+        }
+        self.ready_drinks.append(drink)
+
+        # Информация
+        print("=" * 50)
+        print(f"Добавлен напиток В BuildStation:")
+        print(f"   Тип: {drink_type}")
+        if milk_type:
+            print(f"   Молоко: {milk_type}, Температура: {milk_temp}")
+        if espresso_type:
+            print(f"   Эспрессо: {espresso_type}, Качество: {espresso_quality}")
+        print(f"   Всего напитков: {len(self.ready_drinks)}")
+        print("=" * 50)
 
     def draw(self, screen):
-        """ Отрисовка станции сборки """
+        """ Отрисовка станции сборки с готовыми напитками """
         screen.fill(self.bg_color)
 
+        # Заголовок
+        font = py.font.Font(None, 48)
+        title = font.render("ГОТОВЫЕ НАПИТКИ", True, WHITE)
+        screen.blit(title, (20, 20))
+
+        # Подзаголовок с количеством
+        sub_font = py.font.Font(None, 24)
+        count_text = sub_font.render(f"Всего напитков: {len(self.ready_drinks)}", True, WHITE)
+        screen.blit(count_text, (20, 80))
+
+        # Информация
+        debug_font = py.font.Font(None, 20)
+        for i, drink in enumerate(self.ready_drinks):
+            debug_text = f"{i + 1}. {drink['type']}"
+            if drink.get('milk_type'):
+                debug_text += f" - {drink['milk_type']}"
+            debug_surface = debug_font.render(debug_text, True, (200, 200, 200))
+            screen.blit(debug_surface, (20, 110 + i * 25))
+
+        # Рисуем готовые напитки
+        if not self.ready_drinks:
+            # Сообщение если нет напитков
+            empty_font = py.font.Font(None, 32)
+            empty_text = empty_font.render("Нет готовых напитков", True, (200, 200, 200))
+            screen.blit(empty_text, (screen.get_width() // 2 - empty_text.get_width() // 2,
+                                     screen.get_height() // 2 - empty_text.get_height() // 2))
+        else:
+            # Рассчитываем позиции ячеек
+            start_x = 20
+            start_y = 120
+            cell_width = self.cell_size
+            cell_height = self.cell_size + 60
+
+            for i, drink in enumerate(self.ready_drinks):
+                # Рассчитываем позицию ячейки
+                row = i // self.cells_per_row
+                col = i % self.cells_per_row
+
+                x = start_x + col * (cell_width + self.spacing)
+                y = start_y + row * (cell_height + self.spacing)
+
+                # Проверяем, чтобы не выходить за границы экрана
+                if y + cell_height > screen.get_height() - 20:
+                    # Если не хватает места, прекращаем рисование
+                    overflow_font = py.font.Font(None, 20)
+                    overflow_text = overflow_font.render(f"... и еще {len(self.ready_drinks) - i} напитков", True, WHITE)
+                    screen.blit(overflow_text, (x, y))
+                    break
+
+                # Рисуем ячейку напитка
+                self.draw_drink_cell(screen, drink, x, y, cell_width, cell_height)
+
+    def draw_drink_cell(self, screen, drink, x, y, width, height):
+        """ Отрисовка ячейки с напитком """
+        # Фон ячейки
+        cell_color = (70, 70, 100)
+        py.draw.rect(screen, cell_color, (x, y, width, height))
+        py.draw.rect(screen, (100, 100, 140), (x, y, width, height), 3)
+
+        # Рисуем стакан в зависимости от типа напитка
+        glass_x = x + (width - 80) // 2
+        glass_y = y + 20
+        glass_width = 80
+        glass_height = 100
+
+        if drink["type"] == "milk":
+            # Молочный напиток
+            self.draw_milk_glass(screen, drink, glass_x, glass_y, glass_width, glass_height)
+        elif drink["type"] == "espresso":
+            # Эспрессо
+            self.draw_espresso_glass(screen, drink, glass_x, glass_y, glass_width, glass_height)
+
+        # Текст с информацией о напитке
+        info_font = py.font.Font(None, 18)
+
+        # Тип напитка
+        drink_type_text = ""
+        if drink["type"] == "milk":
+            drink_type_text = "Молоко"
+        elif drink["type"] == "espresso":
+            drink_type_text = "Эспрессо"
+
+        type_surface = info_font.render(drink_type_text, True, WHITE)
+        screen.blit(type_surface, (x + (width - type_surface.get_width()) // 2, y + glass_height + 30))
+
+        # Детали напитка
+        details = []
+        if drink["milk_type"]:
+            milk_text = drink["milk_type"].replace("_", " ").title()
+            if drink["milk_temp"]:
+                milk_text += f" ({drink['milk_temp']})"
+            details.append(milk_text)
+
+        if drink["espresso_type"]:
+            espresso_text = drink["espresso_type"].replace("_", " ").title()
+            if drink["espresso_quality"]:
+                espresso_text += f" - {drink['espresso_quality']}"
+            details.append(espresso_text)
+
+        # Рисуем детали
+        for i, detail in enumerate(details[:2]):  # Максимум 2 строки
+            detail_surface = info_font.render(detail, True, (220, 220, 220))
+            screen.blit(detail_surface, (x + (width - detail_surface.get_width()) // 2, y + glass_height + 50 + i * 20))
+
+    def draw_milk_glass(self, screen, drink, x, y, width, height):
+        """ Отрисовка стакана с молоком """
+        # Стакан
+        glass_color = (240, 240, 240)
+        py.draw.rect(screen, glass_color, (x, y, width, height))
+        py.draw.rect(screen, (200, 200, 200), (x, y, width, height), 2)
+
+        # Цвет молока
+        milk_color = WHITE
+        if drink["milk_type"] == "STRAWBERRY_MILK":
+            milk_color = (255, 200, 220)  # Розовый для клубничного
+
+        if drink["milk_temp"] == "hot":
+            # Более теплый цвет для горячего молока
+            milk_color = tuple(min(255, c + 20) for c in milk_color)
+
+        # Заполняем стакан молоком
+        fill_height = height - 10
+        fill_y = y + 5
+        py.draw.rect(screen, milk_color, (x + 2, fill_y, width - 4, fill_height))
+
+        # Эффект пены сверху
+        foam_color = tuple(min(255, c + 30) for c in milk_color)
+        foam_height = 15
+        py.draw.rect(screen, foam_color, (x + 2, fill_y, width - 4, foam_height))
+
+        # Ножка стакана
+        stem_width = width // 3
+        stem_height = 10
+        stem_x = x + (width - stem_width) // 2
+        stem_y = y + height
+        py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
+
+    def draw_espresso_glass(self, screen, drink, x, y, width, height):
+        """ Отрисовка стакана с эспрессо """
+        # Стакан
+        glass_color = (240, 240, 240)
+        py.draw.rect(screen, glass_color, (x, y, width, height))
+        py.draw.rect(screen, (200, 200, 200), (x, y, width, height), 2)
+
+        # Цвет эспрессо
+        espresso_color = CITY_ROAST
+        if drink["espresso_type"] == "DECAF_ROAST":
+            espresso_color = DECAF_ROAST
+
+        # Качество влияет на оттенок
+        if drink["espresso_quality"] == "отличное":
+            # Более насыщенный цвет для отличного качества
+            espresso_color = tuple(min(255, c + 20) for c in espresso_color)
+        elif drink["espresso_quality"] == "среднее":
+            # Более светлый для среднего
+            espresso_color = tuple(min(255, c + 40) for c in espresso_color)
+
+        # Заполняем стакан эспрессо (предполагаем 2 порции)
+        fill_height = (height - 10) * 0.6
+        fill_y = y + height - fill_height - 5
+        py.draw.rect(screen, espresso_color, (x + 2, fill_y, width - 4, fill_height))
+
+        # Пена эспрессо (крема)
+        cream_color = tuple(min(255, c + 50) for c in espresso_color)
+        cream_height = 8
+        py.draw.rect(screen, cream_color, (x + 2, fill_y, width - 4, cream_height))
+
+        # Ножка стакана
+        stem_width = width // 3
+        stem_height = 10
+        stem_x = x + (width - stem_width) // 2
+        stem_y = y + height
+        py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
+
     def events(self, events):
+        """ Обработка событий на станции сборки """
         pass
 
 class StationManager:
@@ -914,8 +1335,21 @@ class StationManager:
             "brew": {"left": "build", "right": "order"},
             "build": {"left": None, "right": "brew"}
         }
-
+        self.connect_stations()
         self.update_navigation()
+
+    def connect_stations(self):
+        """ Связываем станции между собой """
+        brew_station = self.stations["brew"]
+        build_station = self.stations["build"]
+
+        # Передаем ссылку на build_station в brew_station
+        brew_station.build_station = build_station
+
+        # Отладочная информация
+        print("=== СВЯЗЬ СТАНЦИЙ ===")
+        print(f"BrewStation имеет ссылку на BuildStation: {brew_station.build_station is not None}")
+        print("=====================")
 
     def update_navigation(self):
         """ Обновление видимости и цветов кнопок навигации """
