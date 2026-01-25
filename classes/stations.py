@@ -340,13 +340,6 @@ class BrewStation(Station):
                 py.draw.rect(screen, milk_color, (glass_x, fill_y, glass_width, fill_height))
                 py.draw.rect(screen, (220, 220, 220), (glass_x, fill_y, glass_width, fill_height), 1)
 
-        # Ножка стакана
-        stem_width = glass_width // 3
-        stem_height = 15
-        stem_x = glass_x + (glass_width - stem_width) // 2
-        stem_y = glass_y + glass_height
-        py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
-
         # Кнопка наливки
         if cell["pour_button"] and cell["pour_button"].visible:
             cell["pour_button"].draw(screen)
@@ -412,13 +405,6 @@ class BrewStation(Station):
             foam_height = portion_height
             foam_y = glass_y + glass_height - portions * portion_height
             py.draw.rect(screen, foam_color, (glass_x, foam_y, glass_width, foam_height))
-
-        # Ножка стакана
-        stem_width = glass_width // 3
-        stem_height = 15
-        stem_x = glass_x + (glass_width - stem_width) // 2
-        stem_y = glass_y + glass_height
-        py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
 
         # Кнопка остановки
         if cell["stop_whisk_button"] and cell["stop_whisk_button"].visible:
@@ -498,13 +484,6 @@ class BrewStation(Station):
             py.draw.rect(screen, espresso_color, (glass_x, fill_y, glass_width, fill_height))
             py.draw.rect(screen, (220, 220, 220), (glass_x, fill_y, glass_width, fill_height), 1)
 
-        # Ножка стакана
-        stem_width = glass_width // 3
-        stem_height = 15
-        stem_x = glass_x + (glass_width - stem_width) // 2
-        stem_y = glass_y + glass_height
-        py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
-
         # Отрисовка кнопок
         if not cell.get("roast_slider_stopped", False):
             # Если ползунок еще не остановлен - кнопка "СТОП"
@@ -563,13 +542,6 @@ class BrewStation(Station):
             fill_height = portion_height
             py.draw.rect(screen, espresso_color, (glass_x, fill_y, glass_width, fill_height))
             py.draw.rect(screen, (220, 220, 220), (glass_x, fill_y, glass_width, fill_height), 1)
-
-        # Ножка стакана
-        stem_width = glass_width // 3
-        stem_height = 15
-        stem_x = glass_x + (glass_width - stem_width) // 2
-        stem_y = glass_y + glass_height
-        py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
 
     def finish_pouring(self, cell):
         """ Завершение наливки и переход к взбиванию """
@@ -1101,12 +1073,18 @@ class BuildStation(Station):
         super().__init__("Сборка", BLUE1, BLUE)
         # Список готовых напитков
         self.ready_drinks = []
-        # Размер ячейки для напитка
-        self.cell_size = 200
-        # Количество ячеек в ряду
-        self.cells_per_row = 5
-        # Отступ между ячейками
-        self.spacing = 10
+        # Параметры отрисовки
+        self.start_x = 50
+        self.start_y = 10
+        self.cell_width = 200
+        self.cell_height = 200
+        self.cell_spacing = 20
+        # Параметры для перелистывания
+        self.current_start_index = 0
+        self.max_visible_drinks = 5
+        # Кнопки перелистывания
+        self.prev_button = Button(80, 40, (100, 100, 150), (10, 200))
+        self.next_button = Button(80, 40, (100, 100, 150), (1200 - 90, 200))
 
     def add_ready_drink(self, drink_type, milk_type=None, milk_temp=None, espresso_type=None, espresso_quality=None):
         """ Добавить готовый напиток на станцию сборки """
@@ -1134,58 +1112,48 @@ class BuildStation(Station):
     def draw(self, screen):
         """ Отрисовка станции сборки с готовыми напитками """
         screen.fill(self.bg_color)
+        # Рисуем кнопки перелистывания
+        if len(self.ready_drinks) > self.max_visible_drinks:
+            self.prev_button.draw(screen)
+            self.next_button.draw(screen)
+            # Отключаем кнопки если достигли границ
+            if self.current_start_index == 0:
+                self.prev_button.change_color((70, 70, 100))
+            else:
+                self.prev_button.change_color((100, 100, 150))
 
-        # Заголовок
-        font = py.font.Font(None, 48)
-        title = font.render("ГОТОВЫЕ НАПИТКИ", True, WHITE)
-        screen.blit(title, (20, 20))
+            if self.current_start_index + self.max_visible_drinks >= len(self.ready_drinks):
+                self.next_button.change_color((70, 70, 100))
+            else:
+                self.next_button.change_color((100, 100, 150))
 
-        # Подзаголовок с количеством
-        sub_font = py.font.Font(None, 24)
-        count_text = sub_font.render(f"Всего напитков: {len(self.ready_drinks)}", True, WHITE)
-        screen.blit(count_text, (20, 80))
-
-        # Информация
-        debug_font = py.font.Font(None, 20)
-        for i, drink in enumerate(self.ready_drinks):
-            debug_text = f"{i + 1}. {drink['type']}"
-            if drink.get('milk_type'):
-                debug_text += f" - {drink['milk_type']}"
-            debug_surface = debug_font.render(debug_text, True, (200, 200, 200))
-            screen.blit(debug_surface, (20, 110 + i * 25))
-
-        # Рисуем готовые напитки
-        if not self.ready_drinks:
-            # Сообщение если нет напитков
-            empty_font = py.font.Font(None, 32)
-            empty_text = empty_font.render("Нет готовых напитков", True, (200, 200, 200))
-            screen.blit(empty_text, (screen.get_width() // 2 - empty_text.get_width() // 2,
-                                     screen.get_height() // 2 - empty_text.get_height() // 2))
-        else:
-            # Рассчитываем позиции ячеек
-            start_x = 20
-            start_y = 120
-            cell_width = self.cell_size
-            cell_height = self.cell_size + 60
-
-            for i, drink in enumerate(self.ready_drinks):
+        # Рисуем напитки
+        visible_drinks = self.get_visible_drinks()
+        if visible_drinks:
+            for i, drink in enumerate(visible_drinks):
                 # Рассчитываем позицию ячейки
-                row = i // self.cells_per_row
-                col = i % self.cells_per_row
+                x = self.start_x + i * (self.cell_width + self.cell_spacing)
+                y = self.start_y + 40
+                self.draw_drink_cell(screen, drink, x, y, self.cell_width, self.cell_height)
 
-                x = start_x + col * (cell_width + self.spacing)
-                y = start_y + row * (cell_height + self.spacing)
+    def get_visible_drinks(self):
+        """ Получить список напитков для отображения на текущей странице """
+        if not self.ready_drinks:
+            return []
+        end_index = min(self.current_start_index + self.max_visible_drinks, len(self.ready_drinks))
+        return self.ready_drinks[self.current_start_index:end_index]
 
-                # Проверяем, чтобы не выходить за границы экрана
-                if y + cell_height > screen.get_height() - 20:
-                    # Если не хватает места, прекращаем рисование
-                    overflow_font = py.font.Font(None, 20)
-                    overflow_text = overflow_font.render(f"... и еще {len(self.ready_drinks) - i} напитков", True, WHITE)
-                    screen.blit(overflow_text, (x, y))
-                    break
+    def prev_page(self):
+        """ Перейти к предыдущей странице """
+        if self.current_start_index > 0:
+            self.current_start_index = max(0, self.current_start_index - self.max_visible_drinks)
+            print(f"Переход к предыдущей странице. Текущий индекс: {self.current_start_index}")
 
-                # Рисуем ячейку напитка
-                self.draw_drink_cell(screen, drink, x, y, cell_width, cell_height)
+    def next_page(self):
+        """ Перейти к следующей странице """
+        if self.current_start_index + self.max_visible_drinks < len(self.ready_drinks):
+            self.current_start_index += self.max_visible_drinks
+            print(f"Переход к следующей странице. Текущий индекс: {self.current_start_index}")
 
     def draw_drink_cell(self, screen, drink, x, y, width, height):
         """ Отрисовка ячейки с напитком """
@@ -1195,49 +1163,18 @@ class BuildStation(Station):
         py.draw.rect(screen, (100, 100, 140), (x, y, width, height), 3)
 
         # Рисуем стакан в зависимости от типа напитка
-        glass_x = x + (width - 80) // 2
-        glass_y = y + 20
-        glass_width = 80
-        glass_height = 100
+        glass_width = 100
+        glass_height = 120
+        glass_x = x + (width - glass_width) // 2
+        glass_y = y + 50
 
         if drink["type"] == "milk":
             # Молочный напиток
             self.draw_milk_glass(screen, drink, glass_x, glass_y, glass_width, glass_height)
+
         elif drink["type"] == "espresso":
             # Эспрессо
             self.draw_espresso_glass(screen, drink, glass_x, glass_y, glass_width, glass_height)
-
-        # Текст с информацией о напитке
-        info_font = py.font.Font(None, 18)
-
-        # Тип напитка
-        drink_type_text = ""
-        if drink["type"] == "milk":
-            drink_type_text = "Молоко"
-        elif drink["type"] == "espresso":
-            drink_type_text = "Эспрессо"
-
-        type_surface = info_font.render(drink_type_text, True, WHITE)
-        screen.blit(type_surface, (x + (width - type_surface.get_width()) // 2, y + glass_height + 30))
-
-        # Детали напитка
-        details = []
-        if drink["milk_type"]:
-            milk_text = drink["milk_type"].replace("_", " ").title()
-            if drink["milk_temp"]:
-                milk_text += f" ({drink['milk_temp']})"
-            details.append(milk_text)
-
-        if drink["espresso_type"]:
-            espresso_text = drink["espresso_type"].replace("_", " ").title()
-            if drink["espresso_quality"]:
-                espresso_text += f" - {drink['espresso_quality']}"
-            details.append(espresso_text)
-
-        # Рисуем детали
-        for i, detail in enumerate(details[:2]):  # Максимум 2 строки
-            detail_surface = info_font.render(detail, True, (220, 220, 220))
-            screen.blit(detail_surface, (x + (width - detail_surface.get_width()) // 2, y + glass_height + 50 + i * 20))
 
     def draw_milk_glass(self, screen, drink, x, y, width, height):
         """ Отрисовка стакана с молоком """
@@ -1249,20 +1186,18 @@ class BuildStation(Station):
         # Цвет молока
         milk_color = WHITE
         if drink["milk_type"] == "STRAWBERRY_MILK":
-            milk_color = (255, 200, 220)  # Розовый для клубничного
-
+            milk_color = (255, 200, 220)
         if drink["milk_temp"] == "hot":
-            # Более теплый цвет для горячего молока
             milk_color = tuple(min(255, c + 20) for c in milk_color)
 
         # Заполняем стакан молоком
-        fill_height = height - 10
+        fill_height = height - 15
         fill_y = y + 5
         py.draw.rect(screen, milk_color, (x + 2, fill_y, width - 4, fill_height))
 
         # Эффект пены сверху
         foam_color = tuple(min(255, c + 30) for c in milk_color)
-        foam_height = 15
+        foam_height = 20
         py.draw.rect(screen, foam_color, (x + 2, fill_y, width - 4, foam_height))
 
         # Ножка стакана
@@ -1286,20 +1221,18 @@ class BuildStation(Station):
 
         # Качество влияет на оттенок
         if drink["espresso_quality"] == "отличное":
-            # Более насыщенный цвет для отличного качества
             espresso_color = tuple(min(255, c + 20) for c in espresso_color)
         elif drink["espresso_quality"] == "среднее":
-            # Более светлый для среднего
             espresso_color = tuple(min(255, c + 40) for c in espresso_color)
 
-        # Заполняем стакан эспрессо (предполагаем 2 порции)
-        fill_height = (height - 10) * 0.6
+        # Заполняем стакан эспрессо
+        fill_height = (height - 15) * 0.6
         fill_y = y + height - fill_height - 5
         py.draw.rect(screen, espresso_color, (x + 2, fill_y, width - 4, fill_height))
 
-        # Пена эспрессо (крема)
+        # Пена эспрессо
         cream_color = tuple(min(255, c + 50) for c in espresso_color)
-        cream_height = 8
+        cream_height = 10
         py.draw.rect(screen, cream_color, (x + 2, fill_y, width - 4, cream_height))
 
         # Ножка стакана
@@ -1311,7 +1244,16 @@ class BuildStation(Station):
 
     def events(self, events):
         """ Обработка событий на станции сборки """
-        pass
+        for event in events:
+            if event.type == py.MOUSEBUTTONDOWN:
+                pos = event.pos
+
+                # Обработка кнопок перелистывания
+                if len(self.ready_drinks) > self.max_visible_drinks:
+                    if self.prev_button.signal(pos) and self.current_start_index > 0:
+                        self.prev_page()
+                    elif self.next_button.signal(pos) and self.current_start_index + self.max_visible_drinks < len(self.ready_drinks):
+                        self.next_page()
 
 class StationManager:
     """ Менеджер управления станциями """
