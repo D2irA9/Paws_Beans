@@ -1071,11 +1071,42 @@ class BuildStation(Station):
     """ Станция сборки """
     def __init__(self):
         super().__init__("Сборка", BLUE1, BLUE)
-        # Список готовых напитков
         self.ready_drinks = []
-        # Перетаскиваемый напиток
         self.dragging_drink = None
         self.dragging_offset = (0, 0)
+
+        # Выбранный размер и финальный стакан
+        self.selected_size = None
+        self.show_final_stage = False
+
+        # Параметры для финального стакана
+        self.final_glass = {
+            "x": 0,
+            "y": 0,
+            "width": 120,
+            "height": 0,
+            "max_percentage": 100,
+            "filled_percentage": 0,
+            "pouring": False,
+            "pour_progress": 0,
+            "pour_start_time": 0,
+            # "drink_type": None,
+            # "drink_color": None,
+
+            "base_color": None,
+            "syrup_color": None,
+            "has_syrup": False
+        }
+
+        # Горизонтальная полоса с элементами над стаканом
+        self.top_bar_items = []
+        self.current_bar_index = 0
+        self.max_visible_items = 6
+        self.init_top_bar_items()
+
+        # Кнопки перелистывания для полосы
+        self.bar_prev_button = Button(40, 60, (100, 100, 150), (50, 180))
+        self.bar_next_button = Button(40, 60, (100, 100, 150), (1200 - 90, 180))
 
         # Параметры отрисовки
         self.start_x = 50
@@ -1084,11 +1115,11 @@ class BuildStation(Station):
         self.cell_height = 200
         self.cell_spacing = 20
 
-        # Параметры для перелистывания
+        # Параметры для перелистывания напитков
         self.current_start_index = 0
         self.max_visible_drinks = 5
 
-        # Кнопки перелистывания
+        # Кнопки перелистывания напитков
         self.prev_button = Button(80, 40, (100, 100, 150), (10, 200))
         self.next_button = Button(80, 40, (100, 100, 150), (1200 - 90, 200))
 
@@ -1096,40 +1127,58 @@ class BuildStation(Station):
         self.size_buttons = []
         self.create_size_buttons()
 
+        # Кнопка сброса
+        self.reset_button = Button(150, 40, (150, 100, 100), (525, 650))
+        self.reset_button.visible = False
+
         # Прямоугольники внизу для сборки
         self.assembly_boxes = [
             {
                 "id": 0,
                 "x": 150,
-                "y": 400,
+                "y": 450,
                 "width": 300,
                 "height": 200,
                 "name": "Основа",
                 "bg_color": (80, 80, 120),
-                "drink": None
+                "drink": None,
             },
             {
                 "id": 1,
                 "x": 750,
-                "y": 400,
+                "y": 450,
                 "width": 300,
                 "height": 200,
                 "name": "Добавки",
                 "bg_color": (80, 80, 120),
-                "drink": None
+                "drink": None,
             }
         ]
+
+    def init_top_bar_items(self):
+        """ Инициализация горизонтальной полосы над стаканом """
+        # Сиропы
+        syrups = [
+            {"type": "syrup", "name": "Шоколадный", "color": (101, 67, 33), "percentage": 0},
+            {"type": "syrup", "name": "Красный бархат", "color": (178, 34, 34), "percentage": 0},
+            {"type": "syrup", "name": "Солёная карамель", "color": (255, 193, 37), "percentage": 0},
+            {"type": "syrup", "name": "Сахарный сироп", "color": (255, 250, 240), "percentage": 0}
+        ]
+
+        # Промежуток
+        gap = {"type": "empty", "name": "промежуток", "color": (50, 50, 50), "percentage": 0, "is_gap": True}
+
+        # Начальная полоса: сиропы + промежуток
+        self.top_bar_items = syrups + [gap]
 
     def create_size_buttons(self):
         """ Создание кнопок L, S, M """
         center_x = 600
-        button_y = 470
+        button_y = 350
         button_spacing = 10
 
         sizes = ["S", "M", "L"]
         colors = [(150, 200, 150), (200, 200, 150), (200, 150, 150)]
-
-        # Создаем 3 кнопки
         total_width = 3 * 80 + 2 * button_spacing
         start_x = center_x - total_width // 2
 
@@ -1150,7 +1199,7 @@ class BuildStation(Station):
             "espresso_quality": espresso_quality,
             "id": len(self.ready_drinks),
             "dragging": False,
-            "pos": None
+            "pos": None,
         }
         self.ready_drinks.append(drink)
 
@@ -1164,11 +1213,99 @@ class BuildStation(Station):
         print(f"   Всего напитков: {len(self.ready_drinks)}")
         print("=" * 50)
 
+        # Добавляем молоко/эспрессо в полосу над стаканом
+        drink_color = self.get_drink_color(drink)
+
+        if drink_type == "milk":
+            item = {
+                "type": "milk",
+                "name": f"Молоко {milk_type}" if milk_type else "Молоко",
+                "color": drink_color,
+                "percentage": 60,
+                "drink_data": drink.copy(),
+                "pouring": False,
+                "pour_progress": 0
+            }
+        elif drink_type == "espresso":
+            item = {
+                "type": "espresso",
+                "name": f"Эспрессо {espresso_type}" if espresso_type else "Эспрессо",
+                "color": drink_color,
+                "percentage": 40,
+                "drink_data": drink.copy(),
+                "pouring": False,
+                "pour_progress": 0
+            }
+
+        # Добавляем после промежутка, если он есть
+        gap_index = next((i for i, item in enumerate(self.top_bar_items) if item.get("is_gap", False)), -1)
+        if gap_index != -1:
+            self.top_bar_items.insert(gap_index + 1, item)
+        else:
+            self.top_bar_items.append(item)
+
+        print(f"Добавлен в полосу: {item['name']}")
+
+    def show_size_buttons(self):
+        """ Показать кнопки размеров """
+        for button in self.size_buttons:
+            button.visible = True
+
+    def hide_size_buttons(self):
+        """ Скрыть кнопки размеров """
+        for button in self.size_buttons:
+            button.visible = False
+
+    def draw_assembly_boxes(self, screen):
+        """ Отрисовка прямоугольников для сборки """
+        for box in self.assembly_boxes:
+            x, y, width, height = box["x"], box["y"], box["width"], box["height"]
+
+            py.draw.rect(screen, box["bg_color"], (x, y, width, height))
+            py.draw.rect(screen, (40, 40, 60), (x, y, width, height), 3)
+
+            if box["drink"] is None:
+                font = py.font.Font(None, 32)
+                text = font.render(box["name"], True, (200, 200, 255))
+                screen.blit(text, (x + (width - text.get_width()) // 2, y + (height - text.get_height()) // 2))
+
+    def draw_drinks_in_boxes(self, screen):
+        """ Отрисовка напитков внутри прямоугольников """
+        for box in self.assembly_boxes:
+            if box["drink"]:
+                x = box["x"] + (box["width"] - self.cell_width) // 2
+                y = box["y"] + (box["height"] - self.cell_height) // 2
+                self.draw_drink_cell(screen, box["drink"], x, y, self.cell_width, self.cell_height)
+
+    def get_visible_drinks(self):
+        """ Получить список напитков для отображения на текущей странице """
+        if not self.ready_drinks:
+            return []
+        end_index = min(self.current_start_index + self.max_visible_drinks, len(self.ready_drinks))
+        return self.ready_drinks[self.current_start_index:end_index]
+
+    def get_visible_bar_items(self):
+        """ Получить видимые элементы из полосы (листание по кругу) """
+        if not self.top_bar_items:
+            return []
+
+        visible_items = []
+        for i in range(self.max_visible_items):
+            index = (self.current_bar_index + i) % len(self.top_bar_items)
+            visible_items.append(self.top_bar_items[index])
+
+        return visible_items
+
     def draw(self, screen):
-        """ Отрисовка станции сборки с готовыми напитками """
+        """ Отрисовка станции сборки """
         screen.fill(self.bg_color)
 
-        # Рисуем кнопки перелистывания
+        # Если на этапе финальной сборки
+        if self.show_final_stage:
+            self.draw_final_stage(screen)
+            return
+
+        # Рисуем кнопки перелистывания напитков
         if len(self.ready_drinks) > self.max_visible_drinks:
             self.prev_button.draw(screen)
             self.next_button.draw(screen)
@@ -1206,7 +1343,7 @@ class BuildStation(Station):
         both_filled = (self.assembly_boxes[0]["drink"] is not None and
                        self.assembly_boxes[1]["drink"] is not None)
 
-        # Показываем кнопки размеров
+        # Показываем кнопки размеров если оба прямоугольника заполнены
         if both_filled:
             self.show_size_buttons()
             for button in self.size_buttons:
@@ -1214,38 +1351,266 @@ class BuildStation(Station):
         else:
             self.hide_size_buttons()
 
-    def draw_assembly_boxes(self, screen):
-        """ Отрисовка прямоугольников для сборки """
+    def draw_final_stage(self, screen):
+        """ Отрисовка финальной стадии сборки """
+        # Рисуем стакан
+        self.draw_empty_glass(screen)
+
+        # Рисуем серую полосу над стаканом
+        self.draw_top_bar(screen)
+
+        # Рисуем кнопку сброса
+        self.reset_button.visible = True
+        self.reset_button.draw(screen)
+
+    def draw_top_bar(self, screen):
+        """ Отрисовка горизонтальной полосы над стаканом """
+        # Серая полоса (фон)
+        bar_y = 180
+        bar_height = 100
+        bar_width = 1100
+        bar_x = (screen.get_width() - bar_width) // 2
+
+        # Фон полосы
+        py.draw.rect(screen, (70, 70, 90), (bar_x, bar_y, bar_width, bar_height))
+        py.draw.rect(screen, (40, 40, 60), (bar_x, bar_y, bar_width, bar_height), 3)
+
+        # Всегда показываем кнопки листания
+        self.bar_prev_button.draw(screen)
+        self.bar_next_button.draw(screen)
+
+        # Кнопки всегда активные
+        self.bar_prev_button.change_color((100, 100, 150))
+        self.bar_next_button.change_color((100, 100, 150))
+
+        # Рисуем видимые элементы полосы
+        visible_items = self.get_visible_bar_items()
+        item_width = 120
+        item_height = 70
+        item_spacing = 20
+        start_x = bar_x + 70
+
+        for i, item in enumerate(visible_items):
+            x = start_x + i * (item_width + item_spacing)
+            y = bar_y + (bar_height - item_height) // 2
+
+            # Если это промежуток - рисуем пустой прямоугольник
+            if item.get("is_gap", False):
+                py.draw.rect(screen, (50, 50, 50), (x, y, item_width, item_height))
+                py.draw.rect(screen, (30, 30, 40), (x, y, item_width, item_height), 2)
+                # Текст "промежуток"
+                font = py.font.Font(None, 18)
+                text = font.render("промежуток", True, (150, 150, 150))
+                screen.blit(text, (x + (item_width - text.get_width()) // 2, y + 25))
+            else:
+                # Рисуем элемент полосы
+                self.draw_bar_item(screen, item, x, y, item_width, item_height)
+
+    def draw_bar_item(self, screen, item, x, y, width, height):
+        """ Отрисовка элемента в полосе """
+        # Фон элемента
+        item_color = item["color"]
+        py.draw.rect(screen, item_color, (x, y, width, height))
+
+        # Обводка
+        border_color = (255, 255, 100) if item.get("pouring", False) else (40, 40, 60)
+        border_width = 4 if item.get("pouring", False) else 2
+        py.draw.rect(screen, border_color, (x, y, width, height), border_width)
+
+        # Название
+        font = py.font.Font(None, 20)
+        name = item["name"]
+        # Обрезаем слишком длинные названия
+        if len(name) > 12:
+            name = name[:10] + ".."
+        text = font.render(name, True, (255, 255, 255))
+        screen.blit(text, (x + (width - text.get_width()) // 2, y + 10))
+
+        # Тип элемента
+        type_font = py.font.Font(None, 16)
+        type_text = type_font.render(item["type"], True, (200, 200, 200))
+        screen.blit(type_text, (x + (width - type_text.get_width()) // 2, y + 30))
+
+        # Индикатор наливания
+        if item.get("pouring", False):
+            progress = item.get("pour_progress", 0)
+            progress_width = int(width * progress / 100)
+            progress_x = x + (width - progress_width) // 2
+
+            # Полупрозрачный индикатор сверху
+            progress_surface = py.Surface((progress_width, 10), py.SRCALPHA)
+            progress_surface.fill((255, 255, 255, 150))
+            screen.blit(progress_surface, (progress_x, y))
+
+    def draw_empty_glass(self, screen):
+        """ Отрисовка пустого стакана """
+        center_x = screen.get_width() // 2
+        center_y = 350
+
+        # Определяем размер стакана
+        if self.selected_size == "S":
+            glass_height = 180
+        elif self.selected_size == "M":
+            glass_height = 150
+        elif self.selected_size == "L":
+            glass_height = 120
+        else:
+            glass_height = 150
+
+        glass_width = 120
+
+        # Сохраняем параметры
+        self.final_glass["x"] = center_x - glass_width // 2
+        self.final_glass["y"] = center_y
+        self.final_glass["width"] = glass_width
+        self.final_glass["height"] = glass_height
+
+        x, y = self.final_glass["x"], self.final_glass["y"]
+
+        # Фон для стакана
+        bg_color = (50, 50, 80)
+        py.draw.rect(screen, bg_color, (x - 10, y - 10, glass_width + 20, glass_height + 40))
+        py.draw.rect(screen, (70, 70, 100), (x - 10, y - 10, glass_width + 20, glass_height + 40), 3)
+
+        # Стакан
+        glass_color = (240, 240, 240)
+        py.draw.rect(screen, glass_color, (x, y, glass_width, glass_height))
+        py.draw.rect(screen, (200, 200, 200), (x, y, glass_width, glass_height), 2)
+
+        # Заполненная часть
+        filled_percentage = self.final_glass["filled_percentage"]
+        if filled_percentage > 0 and self.final_glass["drink_color"]:
+            fill_height = int(glass_height * (filled_percentage / 100))
+            fill_y = y + glass_height - fill_height
+
+            py.draw.rect(screen, self.final_glass["drink_color"], (x + 2, fill_y, glass_width - 4, fill_height))
+            py.draw.rect(screen, (220, 220, 220), (x + 2, fill_y, glass_width - 4, fill_height), 1)
+
+        # Ножка стакана
+        stem_width = glass_width // 3
+        stem_height = 15
+        stem_x = x + (glass_width - stem_width) // 2
+        stem_y = y + glass_height
+        py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
+
+        # Информация о размере
+        font = py.font.Font(None, 36)
+        size_text = font.render(f"Размер: {self.selected_size}", True, (255, 255, 255))
+        screen.blit(size_text, (center_x - size_text.get_width() // 2, y + glass_height + 30))
+
+    def update_pouring(self):
+        """ Обновление процесса наливания """
+        current_time = py.time.get_ticks()
+
+        # Обновляем наливание для всех элементов
+        for item in self.top_bar_items:
+            if item.get("pouring", False):
+                if "pour_start_time" not in item:
+                    item["pour_start_time"] = current_time
+
+                elapsed_time = (current_time - item["pour_start_time"]) / 1000.0
+                total_pour_time = 2.0
+                progress = min(100, (elapsed_time / total_pour_time) * 100)
+                item["pour_progress"] = progress
+
+                if progress >= 100:
+                    # Завершаем наливание
+                    self.complete_pouring(item)
+
+    def complete_pouring(self, item):
+        """ Завершение наливания элемента в стакан """
+        item["pouring"] = False
+        item["pour_progress"] = 0
+        if "pour_start_time" in item:
+            del item["pour_start_time"]
+
+        # Добавляем к заполнению стакана
+        if self.final_glass["filled_percentage"] + item["percentage"] <= 100:
+            self.final_glass["filled_percentage"] += item["percentage"]
+
+            # Если это первый напиток (молоко или эспрессо) - устанавливаем цвет
+            if item["type"] in ["milk", "espresso"] and self.final_glass["filled_percentage"] == item["percentage"]:
+                self.final_glass["drink_color"] = item["color"]
+                self.final_glass["drink_type"] = item["type"]
+
+            print(f"Добавлено: {item['name']} ({item['percentage']}%)")
+            print(f"Всего заполнено: {self.final_glass['filled_percentage']}%")
+        else:
+            print("Стакан переполнен!")
+
+    def handle_final_stage_events(self, event, pos):
+        """ Обработка событий на финальной стадии """
+        if event.type == py.MOUSEBUTTONDOWN:
+            # Обработка кнопки сброса
+            if self.reset_button.signal(pos):
+                self.reset_all()
+                return
+
+            # Обработка кнопок перелистывания полосы
+            if self.bar_prev_button.signal(pos):
+                # Листаем назад по кругу
+                self.current_bar_index = (self.current_bar_index - 1) % len(self.top_bar_items)
+                print(f"Листание назад. Текущий индекс: {self.current_bar_index}")
+
+            elif self.bar_next_button.signal(pos):
+                # Листаем вперед по кругу
+                self.current_bar_index = (self.current_bar_index + 1) % len(self.top_bar_items)
+                print(f"Листание вперед. Текущий индекс: {self.current_bar_index}")
+
+            # Проверяем клик по элементам полосы
+            bar_y = 180
+            bar_height = 100
+            bar_width = 1100
+            bar_x = (1200 - bar_width) // 2
+
+            visible_items = self.get_visible_bar_items()
+            item_width = 120
+            item_height = 70
+            item_spacing = 20
+            start_x = bar_x + 70
+
+            for i, item in enumerate(visible_items):
+                x = start_x + i * (item_width + item_spacing)
+                y = bar_y + (bar_height - item_height) // 2
+
+                # Проверяем клик по элементу
+                if (not item.get("is_gap", False) and
+                        x <= pos[0] <= x + item_width and
+                        y <= pos[1] <= y + item_height):
+
+                    # Проверяем можно ли добавить
+                    if (not item.get("pouring", False) and
+                            self.final_glass["filled_percentage"] + item["percentage"] <= 100):
+                        # Запускаем наливание
+                        item["pouring"] = True
+                        item["pour_start_time"] = py.time.get_ticks()
+                        print(f"Начато наливание: {item['name']}")
+
+                    break
+
+    def reset_all(self):
+        """ Сбросить все и начать заново """
         for box in self.assembly_boxes:
-            x, y, width, height = box["x"], box["y"], box["width"], box["height"]
-            py.draw.rect(screen, box["bg_color"], (x, y, width, height))
-            py.draw.rect(screen, (40, 40, 60), (x, y, width, height), 3)
+            box["drink"] = None
 
-    def draw_drinks_in_boxes(self, screen):
-        """ Отрисовка напитков внутри прямоугольников """
-        for box in self.assembly_boxes:
-            if box["drink"]:
-                x = box["x"] + (box["width"] - self.cell_width) // 2
-                y = box["y"] + (box["height"] - self.cell_height) // 2
-                # Рисуем напиток
-                self.draw_drink_cell(screen, box["drink"], x, y, self.cell_width, self.cell_height)
+        self.selected_size = None
+        self.show_final_stage = False
+        self.reset_button.visible = False
 
-    def show_size_buttons(self):
-        """ Показать кнопки размеров """
-        for button in self.size_buttons:
-            button.visible = True
+        self.final_glass["filled_percentage"] = 0
+        self.final_glass["pouring"] = False
+        self.final_glass["pour_progress"] = 0
+        self.final_glass["drink_type"] = None
+        self.final_glass["drink_color"] = None
 
-    def hide_size_buttons(self):
-        """ Скрыть кнопки размеров """
-        for button in self.size_buttons:
-            button.visible = False
+        # Останавливаем все наливания в полосе
+        for item in self.top_bar_items:
+            item["pouring"] = False
+            item["pour_progress"] = 0
+            if "pour_start_time" in item:
+                del item["pour_start_time"]
 
-    def get_visible_drinks(self):
-        """ Получить список напитков для отображения на текущей странице """
-        if not self.ready_drinks:
-            return []
-        end_index = min(self.current_start_index + self.max_visible_drinks, len(self.ready_drinks))
-        return self.ready_drinks[self.current_start_index:end_index]
+        print("Сброшено. Можно собирать новый напиток.")
 
     def get_drink_at_position(self, pos):
         """ Получить напиток по позиции мыши """
@@ -1254,7 +1619,6 @@ class BuildStation(Station):
             x = self.start_x + i * (self.cell_width + self.cell_spacing)
             y = self.start_y + 40
 
-            # Проверяем попадание в ячейку с напитком
             if (x <= pos[0] <= x + self.cell_width and
                     y <= pos[1] <= y + self.cell_height):
                 return drink, i
@@ -1270,16 +1634,14 @@ class BuildStation(Station):
         return None
 
     def prev_page(self):
-        """ Перейти к предыдущей странице """
-        if self.current_start_index > 0:
-            self.current_start_index = max(0, self.current_start_index - self.max_visible_drinks)
-            print(f"Переход к предыдущей странице. Текущий индекс: {self.current_start_index}")
+        """ Перейти к предыдущей странице напитков """
+        if len(self.ready_drinks) > 0:
+            self.current_start_index = (self.current_start_index - 1) % len(self.ready_drinks)
 
     def next_page(self):
-        """ Перейти к следующей странице """
-        if self.current_start_index + self.max_visible_drinks < len(self.ready_drinks):
-            self.current_start_index += self.max_visible_drinks
-            print(f"Переход к следующей странице. Текущий индекс: {self.current_start_index}")
+        """ Перейти к следующей странице напитков """
+        if len(self.ready_drinks) > 0:
+            self.current_start_index = (self.current_start_index + 1) % len(self.ready_drinks)
 
     def draw_drink_cell(self, screen, drink, x, y, width, height):
         """ Отрисовка ячейки с напитком """
@@ -1287,7 +1649,6 @@ class BuildStation(Station):
         py.draw.rect(screen, cell_color, (x, y, width, height))
         py.draw.rect(screen, (100, 100, 140), (x, y, width, height), 3)
 
-        # Рисуем стакан
         glass_width = 100
         glass_height = 120
         glass_x = x + (width - glass_width) // 2
@@ -1353,39 +1714,69 @@ class BuildStation(Station):
         stem_y = y + height
         py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
 
+    def get_drink_color(self, drink):
+        """ Получить цвет напитка """
+        if drink["type"] == "milk":
+            milk_color = WHITE
+            if drink["milk_type"] == "STRAWBERRY_MILK":
+                milk_color = (255, 200, 220)
+            if drink["milk_temp"] == "hot":
+                milk_color = tuple(min(255, c + 20) for c in milk_color)
+            return milk_color
+        else:
+            espresso_color = CITY_ROAST if drink["espresso_type"] == "CITY_ROAST" else DECAF_ROAST
+            if drink["espresso_quality"] == "отличное":
+                espresso_color = tuple(min(255, c + 20) for c in espresso_color)
+            elif drink["espresso_quality"] == "среднее":
+                espresso_color = tuple(min(255, c + 40) for c in espresso_color)
+            return espresso_color
+
     def events(self, events):
         """ Обработка событий на станции сборки """
+        # Обновляем процессы наливания
+        if self.show_final_stage:
+            self.update_pouring()
+
         for event in events:
             if event.type == py.MOUSEBUTTONDOWN:
                 pos = event.pos
 
-                # Обработка кнопок перелистывания
-                if len(self.ready_drinks) > self.max_visible_drinks:
-                    if self.prev_button.signal(pos) and self.current_start_index > 0:
+                # Если на этапе финальной сборки
+                if self.show_final_stage:
+                    self.handle_final_stage_events(event, pos)
+                    return
+
+                # Обработка кнопок перелистывания напитков
+                if len(self.ready_drinks) > 0:
+                    if self.prev_button.signal(pos):
                         self.prev_page()
-                    elif self.next_button.signal(pos) and self.current_start_index + self.max_visible_drinks < len(self.ready_drinks):
+                    elif self.next_button.signal(pos):
                         self.next_page()
 
-                # Обработка кнопок размеров (L, S, M)
+                # Обработка кнопок размеров
                 if (self.assembly_boxes[0]["drink"] is not None and
-                        self.assembly_boxes[1]["drink"] is not None):
+                        self.assembly_boxes[1]["drink"] is not None and
+                        not self.selected_size):
+
                     for button in self.size_buttons:
                         if button.visible and button.signal(pos):
+                            self.selected_size = button.size
+                            self.show_final_stage = True
                             print(f"Выбран размер: {button.size}")
-                            # self.finalize_drink(button.size)
+                            self.hide_size_buttons()
+                            break
 
-                drink, index = self.get_drink_at_position(pos)
-                if drink:
-                    # Перетаскивание
-                    self.dragging_drink = drink
-                    drink["dragging"] = True
-                    cell_x = self.start_x + index * (self.cell_width + self.cell_spacing)
-                    cell_y = self.start_y + 40
-                    self.dragging_offset = (pos[0] - cell_x, pos[1] - cell_y)
-                    print(f"Начат перетаск напитка #{drink['id']}")
+                # Начало перетаскивания напитка
+                if not self.selected_size:
+                    drink, index = self.get_drink_at_position(pos)
+                    if drink:
+                        self.dragging_drink = drink
+                        drink["dragging"] = True
+                        cell_x = self.start_x + index * (self.cell_width + self.cell_spacing)
+                        cell_y = self.start_y + 40
+                        self.dragging_offset = (pos[0] - cell_x, pos[1] - cell_y)
 
             elif event.type == py.MOUSEMOTION:
-                # Перетаскивание напитка
                 if self.dragging_drink:
                     self.dragging_drink["pos"] = (
                         event.pos[0] - self.dragging_offset[0],
@@ -1396,15 +1787,20 @@ class BuildStation(Station):
                 if self.dragging_drink:
                     pos = event.pos
                     box = self.get_box_at_position(pos)
-                    if box:
+
+                    if box and box["drink"] is None:
                         box["drink"] = self.dragging_drink.copy()
                         print(f"Напиток #{self.dragging_drink['id']} помещен в {box['name']}")
 
                         visible_drinks = self.get_visible_drinks()
-                        global_index = self.current_start_index + visible_drinks.index(self.dragging_drink)
-                        if global_index < len(self.ready_drinks):
+                        if self.dragging_drink in visible_drinks:
+                            index_in_visible = visible_drinks.index(self.dragging_drink)
+                            global_index = (self.current_start_index + index_in_visible) % len(self.ready_drinks)
                             self.ready_drinks.pop(global_index)
-                            print(f"Напиток удален из общего списка")
+
+                            # Обновляем индекс если нужно
+                            if self.current_start_index >= len(self.ready_drinks) > 0:
+                                self.current_start_index %= len(self.ready_drinks)
 
                     self.dragging_drink["dragging"] = False
                     self.dragging_drink["pos"] = None
