@@ -114,8 +114,8 @@ class BrewStation(Station):
                 "milk_level2_buttons": [],
                 "espresso_type_buttons": [],
                 "espresso_portion_buttons": [],
-                "espresso_stop_button": Button(150, 40, BLUE, (x + 75, y + 450)),  # Кнопка остановки ползунка
-                "espresso_start_button": Button(150, 40, GREEN, (x + 75, y + 400)),  # Кнопка начала обжарки
+                "espresso_stop_button": Button(150, 40, BLUE, (x + 75, y + 450)),
+                "espresso_start_button": Button(150, 40, GREEN, (x + 75, y + 400)),
 
                 # Кнопка наливки
                 "pour_button": None,
@@ -1090,9 +1090,6 @@ class BuildStation(Station):
             "pouring": False,
             "pour_progress": 0,
             "pour_start_time": 0,
-            # "drink_type": None,
-            # "drink_color": None,
-
             "base_color": None,
             "syrup_color": None,
             "has_syrup": False
@@ -1139,7 +1136,6 @@ class BuildStation(Station):
                 "y": 450,
                 "width": 300,
                 "height": 200,
-                "name": "Основа",
                 "bg_color": (80, 80, 120),
                 "drink": None,
             },
@@ -1149,7 +1145,6 @@ class BuildStation(Station):
                 "y": 450,
                 "width": 300,
                 "height": 200,
-                "name": "Добавки",
                 "bg_color": (80, 80, 120),
                 "drink": None,
             }
@@ -1159,14 +1154,14 @@ class BuildStation(Station):
         """ Инициализация горизонтальной полосы над стаканом """
         # Сиропы
         syrups = [
-            {"type": "syrup", "name": "Шоколадный", "color": (101, 67, 33), "percentage": 0},
-            {"type": "syrup", "name": "Красный бархат", "color": (178, 34, 34), "percentage": 0},
-            {"type": "syrup", "name": "Солёная карамель", "color": (255, 193, 37), "percentage": 0},
-            {"type": "syrup", "name": "Сахарный сироп", "color": (255, 250, 240), "percentage": 0}
+            {"type": "syrup", "name": "Шоколадный", "color": (101, 67, 33)},
+            {"type": "syrup", "name": "Красный бархат", "color": (178, 34, 34)},
+            {"type": "syrup", "name": "Солёная карамель", "color": (255, 193, 37)},
+            {"type": "syrup", "name": "Сахарный сироп", "color": (255, 250, 240)}
         ]
 
         # Промежуток
-        gap = {"type": "empty", "name": "промежуток", "color": (50, 50, 50), "percentage": 0, "is_gap": True}
+        gap = {"type": "empty", "name": "промежуток", "color": (50, 50, 50), "is_gap": True}
 
         # Начальная полоса: сиропы + промежуток
         self.top_bar_items = syrups + [gap]
@@ -1213,7 +1208,6 @@ class BuildStation(Station):
         print(f"   Всего напитков: {len(self.ready_drinks)}")
         print("=" * 50)
 
-        # Добавляем молоко/эспрессо в полосу над стаканом
         drink_color = self.get_drink_color(drink)
 
         if drink_type == "milk":
@@ -1221,7 +1215,7 @@ class BuildStation(Station):
                 "type": "milk",
                 "name": f"Молоко {milk_type}" if milk_type else "Молоко",
                 "color": drink_color,
-                "percentage": 60,
+                "percentage": 60,  # Молоко заполняет 60%
                 "drink_data": drink.copy(),
                 "pouring": False,
                 "pour_progress": 0
@@ -1231,7 +1225,7 @@ class BuildStation(Station):
                 "type": "espresso",
                 "name": f"Эспрессо {espresso_type}" if espresso_type else "Эспрессо",
                 "color": drink_color,
-                "percentage": 40,
+                "percentage": 100,  # Эспрессо заполняет 40%
                 "drink_data": drink.copy(),
                 "pouring": False,
                 "pour_progress": 0
@@ -1263,11 +1257,6 @@ class BuildStation(Station):
 
             py.draw.rect(screen, box["bg_color"], (x, y, width, height))
             py.draw.rect(screen, (40, 40, 60), (x, y, width, height), 3)
-
-            if box["drink"] is None:
-                font = py.font.Font(None, 32)
-                text = font.render(box["name"], True, (200, 200, 255))
-                screen.blit(text, (x + (width - text.get_width()) // 2, y + (height - text.get_height()) // 2))
 
     def draw_drinks_in_boxes(self, screen):
         """ Отрисовка напитков внутри прямоугольников """
@@ -1477,13 +1466,26 @@ class BuildStation(Station):
         py.draw.rect(screen, glass_color, (x, y, glass_width, glass_height))
         py.draw.rect(screen, (200, 200, 200), (x, y, glass_width, glass_height), 2)
 
+        # Определяем цвет для отрисовки
+        draw_color = self.final_glass["base_color"]
+        if self.final_glass["has_syrup"] and self.final_glass["syrup_color"]:
+            # Смешиваем цвета если есть сироп (50% основной + 50% сироп)
+            if draw_color:
+                draw_color = (
+                    (draw_color[0] + self.final_glass["syrup_color"][0]) // 2,
+                    (draw_color[1] + self.final_glass["syrup_color"][1]) // 2,
+                    (draw_color[2] + self.final_glass["syrup_color"][2]) // 2
+                )
+            else:
+                draw_color = self.final_glass["syrup_color"]
+
         # Заполненная часть
         filled_percentage = self.final_glass["filled_percentage"]
-        if filled_percentage > 0 and self.final_glass["drink_color"]:
+        if filled_percentage > 0 and draw_color:
             fill_height = int(glass_height * (filled_percentage / 100))
             fill_y = y + glass_height - fill_height
 
-            py.draw.rect(screen, self.final_glass["drink_color"], (x + 2, fill_y, glass_width - 4, fill_height))
+            py.draw.rect(screen, draw_color, (x + 2, fill_y, glass_width - 4, fill_height))
             py.draw.rect(screen, (220, 220, 220), (x + 2, fill_y, glass_width - 4, fill_height), 1)
 
         # Ножка стакана
@@ -1492,11 +1494,6 @@ class BuildStation(Station):
         stem_x = x + (glass_width - stem_width) // 2
         stem_y = y + glass_height
         py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
-
-        # Информация о размере
-        font = py.font.Font(None, 36)
-        size_text = font.render(f"Размер: {self.selected_size}", True, (255, 255, 255))
-        screen.blit(size_text, (center_x - size_text.get_width() // 2, y + glass_height + 30))
 
     def update_pouring(self):
         """ Обновление процесса наливания """
@@ -1509,7 +1506,7 @@ class BuildStation(Station):
                     item["pour_start_time"] = current_time
 
                 elapsed_time = (current_time - item["pour_start_time"]) / 1000.0
-                total_pour_time = 2.0
+                total_pour_time = 1.5
                 progress = min(100, (elapsed_time / total_pour_time) * 100)
                 item["pour_progress"] = progress
 
@@ -1524,19 +1521,22 @@ class BuildStation(Station):
         if "pour_start_time" in item:
             del item["pour_start_time"]
 
-        # Добавляем к заполнению стакана
-        if self.final_glass["filled_percentage"] + item["percentage"] <= 100:
-            self.final_glass["filled_percentage"] += item["percentage"]
+        if item["type"] == "syrup":
+            # Сироп только меняет цвет, не заполняет
+            self.final_glass["syrup_color"] = item["color"]
+            self.final_glass["has_syrup"] = True
+            print(f"Добавлен сироп: {item['name']}")
+            print(f"Цвет стакана изменен")
 
-            # Если это первый напиток (молоко или эспрессо) - устанавливаем цвет
-            if item["type"] in ["milk", "espresso"] and self.final_glass["filled_percentage"] == item["percentage"]:
-                self.final_glass["drink_color"] = item["color"]
-                self.final_glass["drink_type"] = item["type"]
-
-            print(f"Добавлено: {item['name']} ({item['percentage']}%)")
-            print(f"Всего заполнено: {self.final_glass['filled_percentage']}%")
-        else:
-            print("Стакан переполнен!")
+        elif item["type"] in ["milk", "espresso"]:
+            # Напиток заполняет стакан
+            if self.final_glass["filled_percentage"] + item["percentage"] <= 100:
+                self.final_glass["filled_percentage"] += item["percentage"]
+                self.final_glass["base_color"] = item["color"]
+                print(f"Добавлено: {item['name']} ({item['percentage']}%)")
+                print(f"Всего заполнено: {self.final_glass['filled_percentage']}%")
+            else:
+                print("Стакан переполнен!")
 
     def handle_final_stage_events(self, event, pos):
         """ Обработка событий на финальной стадии """
@@ -1546,14 +1546,12 @@ class BuildStation(Station):
                 self.reset_all()
                 return
 
-            # Обработка кнопок перелистывания полосы
+            # Листание полосы по кругу
             if self.bar_prev_button.signal(pos):
-                # Листаем назад по кругу
                 self.current_bar_index = (self.current_bar_index - 1) % len(self.top_bar_items)
                 print(f"Листание назад. Текущий индекс: {self.current_bar_index}")
 
             elif self.bar_next_button.signal(pos):
-                # Листаем вперед по кругу
                 self.current_bar_index = (self.current_bar_index + 1) % len(self.top_bar_items)
                 print(f"Листание вперед. Текущий индекс: {self.current_bar_index}")
 
@@ -1579,12 +1577,20 @@ class BuildStation(Station):
                         y <= pos[1] <= y + item_height):
 
                     # Проверяем можно ли добавить
-                    if (not item.get("pouring", False) and
-                            self.final_glass["filled_percentage"] + item["percentage"] <= 100):
-                        # Запускаем наливание
-                        item["pouring"] = True
-                        item["pour_start_time"] = py.time.get_ticks()
-                        print(f"Начато наливание: {item['name']}")
+                    if not item.get("pouring", False):
+                        # Для напитков проверяем заполнение
+                        if item["type"] in ["milk", "espresso"]:
+                            if self.final_glass["filled_percentage"] + item["percentage"] <= 100:
+                                item["pouring"] = True
+                                item["pour_start_time"] = py.time.get_ticks()
+                                print(f"Начато наливание: {item['name']}")
+                            else:
+                                print("Стакан переполнен!")
+                        # Для сиропов всегда можно добавить
+                        elif item["type"] == "syrup":
+                            item["pouring"] = True
+                            item["pour_start_time"] = py.time.get_ticks()
+                            print(f"Начато добавление сиропа: {item['name']}")
 
                     break
 
@@ -1600,8 +1606,9 @@ class BuildStation(Station):
         self.final_glass["filled_percentage"] = 0
         self.final_glass["pouring"] = False
         self.final_glass["pour_progress"] = 0
-        self.final_glass["drink_type"] = None
-        self.final_glass["drink_color"] = None
+        self.final_glass["base_color"] = None
+        self.final_glass["syrup_color"] = None
+        self.final_glass["has_syrup"] = False
 
         # Останавливаем все наливания в полосе
         for item in self.top_bar_items:
@@ -1790,7 +1797,6 @@ class BuildStation(Station):
 
                     if box and box["drink"] is None:
                         box["drink"] = self.dragging_drink.copy()
-                        print(f"Напиток #{self.dragging_drink['id']} помещен в {box['name']}")
 
                         visible_drinks = self.get_visible_drinks()
                         if self.dragging_drink in visible_drinks:
