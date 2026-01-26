@@ -1073,18 +1073,72 @@ class BuildStation(Station):
         super().__init__("Сборка", BLUE1, BLUE)
         # Список готовых напитков
         self.ready_drinks = []
+        # Перетаскиваемый напиток
+        self.dragging_drink = None
+        self.dragging_offset = (0, 0)
+
         # Параметры отрисовки
         self.start_x = 50
         self.start_y = 10
         self.cell_width = 200
         self.cell_height = 200
         self.cell_spacing = 20
+
         # Параметры для перелистывания
         self.current_start_index = 0
         self.max_visible_drinks = 5
+
         # Кнопки перелистывания
         self.prev_button = Button(80, 40, (100, 100, 150), (10, 200))
         self.next_button = Button(80, 40, (100, 100, 150), (1200 - 90, 200))
+
+        # Кнопки L, S, M
+        self.size_buttons = []
+        self.create_size_buttons()
+
+        # Прямоугольники внизу для сборки
+        self.assembly_boxes = [
+            {
+                "id": 0,
+                "x": 150,
+                "y": 400,
+                "width": 300,
+                "height": 200,
+                "name": "Основа",
+                "bg_color": (80, 80, 120),
+                "drink": None
+            },
+            {
+                "id": 1,
+                "x": 750,
+                "y": 400,
+                "width": 300,
+                "height": 200,
+                "name": "Добавки",
+                "bg_color": (80, 80, 120),
+                "drink": None
+            }
+        ]
+
+    def create_size_buttons(self):
+        """ Создание кнопок L, S, M """
+        center_x = 600
+        button_y = 470
+        button_spacing = 10
+
+        sizes = ["S", "M", "L"]
+        colors = [(150, 200, 150), (200, 200, 150), (200, 150, 150)]
+
+        # Создаем 3 кнопки
+        total_width = 3 * 80 + 2 * button_spacing
+        start_x = center_x - total_width // 2
+
+        for i, (size, color) in enumerate(zip(sizes, colors)):
+            x = start_x + i * (80 + button_spacing)
+            button = CircleButton(35, color, (x + 40, button_y), text=size, text_color=(0, 0, 0), font_size=30)
+            button.size = size
+            button.visible = False
+            self.size_buttons.append(button)
 
     def add_ready_drink(self, drink_type, milk_type=None, milk_temp=None, espresso_type=None, espresso_quality=None):
         """ Добавить готовый напиток на станцию сборки """
@@ -1094,11 +1148,12 @@ class BuildStation(Station):
             "milk_temp": milk_temp,
             "espresso_type": espresso_type,
             "espresso_quality": espresso_quality,
-            "id": len(self.ready_drinks)
+            "id": len(self.ready_drinks),
+            "dragging": False,
+            "pos": None
         }
         self.ready_drinks.append(drink)
 
-        # Информация
         print("=" * 50)
         print(f"Добавлен напиток В BuildStation:")
         print(f"   Тип: {drink_type}")
@@ -1112,11 +1167,12 @@ class BuildStation(Station):
     def draw(self, screen):
         """ Отрисовка станции сборки с готовыми напитками """
         screen.fill(self.bg_color)
+
         # Рисуем кнопки перелистывания
         if len(self.ready_drinks) > self.max_visible_drinks:
             self.prev_button.draw(screen)
             self.next_button.draw(screen)
-            # Отключаем кнопки если достигли границ
+
             if self.current_start_index == 0:
                 self.prev_button.change_color((70, 70, 100))
             else:
@@ -1131,10 +1187,58 @@ class BuildStation(Station):
         visible_drinks = self.get_visible_drinks()
         if visible_drinks:
             for i, drink in enumerate(visible_drinks):
-                # Рассчитываем позицию ячейки
-                x = self.start_x + i * (self.cell_width + self.cell_spacing)
-                y = self.start_y + 40
-                self.draw_drink_cell(screen, drink, x, y, self.cell_width, self.cell_height)
+                if drink.get("dragging") and drink.get("pos"):
+                    x, y = drink["pos"]
+                    self.draw_drink_cell(screen, drink, x, y, self.cell_width, self.cell_height)
+                else:
+                    x = self.start_x + i * (self.cell_width + self.cell_spacing)
+                    y = self.start_y + 40
+                    drink["cell_pos"] = (x, y)
+                    self.draw_drink_cell(screen, drink, x, y, self.cell_width, self.cell_height)
+
+        # Рисуем прямоугольники для сборки
+        self.draw_assembly_boxes(screen)
+
+        # Рисуем напитки внутри прямоугольников
+        self.draw_drinks_in_boxes(screen)
+
+        # Проверяем, заполнены ли оба прямоугольника
+        both_filled = (self.assembly_boxes[0]["drink"] is not None and
+                       self.assembly_boxes[1]["drink"] is not None)
+
+        # Показываем кнопки размеров
+        if both_filled:
+            self.show_size_buttons()
+            for button in self.size_buttons:
+                button.draw(screen)
+        else:
+            self.hide_size_buttons()
+
+    def draw_assembly_boxes(self, screen):
+        """ Отрисовка прямоугольников для сборки """
+        for box in self.assembly_boxes:
+            x, y, width, height = box["x"], box["y"], box["width"], box["height"]
+            py.draw.rect(screen, box["bg_color"], (x, y, width, height))
+            py.draw.rect(screen, (40, 40, 60), (x, y, width, height), 3)
+
+    def draw_drinks_in_boxes(self, screen):
+        """ Отрисовка напитков внутри прямоугольников """
+        for box in self.assembly_boxes:
+            if box["drink"]:
+                x = box["x"] + (box["width"] - self.cell_width) // 2
+                y = box["y"] + (box["height"] - self.cell_height) // 2
+                # Рисуем напиток
+                self.draw_drink_cell(screen, box["drink"], x, y, self.cell_width, self.cell_height)
+
+    def show_size_buttons(self):
+        """ Показать кнопки размеров """
+        for button in self.size_buttons:
+            button.visible = True
+
+    def hide_size_buttons(self):
+        """ Скрыть кнопки размеров """
+        for button in self.size_buttons:
+            button.visible = False
 
     def get_visible_drinks(self):
         """ Получить список напитков для отображения на текущей странице """
@@ -1142,6 +1246,28 @@ class BuildStation(Station):
             return []
         end_index = min(self.current_start_index + self.max_visible_drinks, len(self.ready_drinks))
         return self.ready_drinks[self.current_start_index:end_index]
+
+    def get_drink_at_position(self, pos):
+        """ Получить напиток по позиции мыши """
+        visible_drinks = self.get_visible_drinks()
+        for i, drink in enumerate(visible_drinks):
+            x = self.start_x + i * (self.cell_width + self.cell_spacing)
+            y = self.start_y + 40
+
+            # Проверяем попадание в ячейку с напитком
+            if (x <= pos[0] <= x + self.cell_width and
+                    y <= pos[1] <= y + self.cell_height):
+                return drink, i
+        return None, -1
+
+    def get_box_at_position(self, pos):
+        """ Получить прямоугольник по позиции мыши """
+        for box in self.assembly_boxes:
+            x, y, width, height = box["x"], box["y"], box["width"], box["height"]
+            if (x <= pos[0] <= x + width and
+                    y <= pos[1] <= y + height):
+                return box
+        return None
 
     def prev_page(self):
         """ Перейти к предыдущей странице """
@@ -1157,50 +1283,41 @@ class BuildStation(Station):
 
     def draw_drink_cell(self, screen, drink, x, y, width, height):
         """ Отрисовка ячейки с напитком """
-        # Фон ячейки
         cell_color = (70, 70, 100)
         py.draw.rect(screen, cell_color, (x, y, width, height))
         py.draw.rect(screen, (100, 100, 140), (x, y, width, height), 3)
 
-        # Рисуем стакан в зависимости от типа напитка
+        # Рисуем стакан
         glass_width = 100
         glass_height = 120
         glass_x = x + (width - glass_width) // 2
         glass_y = y + 50
 
         if drink["type"] == "milk":
-            # Молочный напиток
             self.draw_milk_glass(screen, drink, glass_x, glass_y, glass_width, glass_height)
-
         elif drink["type"] == "espresso":
-            # Эспрессо
             self.draw_espresso_glass(screen, drink, glass_x, glass_y, glass_width, glass_height)
 
     def draw_milk_glass(self, screen, drink, x, y, width, height):
         """ Отрисовка стакана с молоком """
-        # Стакан
         glass_color = (240, 240, 240)
         py.draw.rect(screen, glass_color, (x, y, width, height))
         py.draw.rect(screen, (200, 200, 200), (x, y, width, height), 2)
 
-        # Цвет молока
         milk_color = WHITE
         if drink["milk_type"] == "STRAWBERRY_MILK":
             milk_color = (255, 200, 220)
         if drink["milk_temp"] == "hot":
             milk_color = tuple(min(255, c + 20) for c in milk_color)
 
-        # Заполняем стакан молоком
         fill_height = height - 15
         fill_y = y + 5
         py.draw.rect(screen, milk_color, (x + 2, fill_y, width - 4, fill_height))
 
-        # Эффект пены сверху
         foam_color = tuple(min(255, c + 30) for c in milk_color)
         foam_height = 20
         py.draw.rect(screen, foam_color, (x + 2, fill_y, width - 4, foam_height))
 
-        # Ножка стакана
         stem_width = width // 3
         stem_height = 10
         stem_x = x + (width - stem_width) // 2
@@ -1209,33 +1326,27 @@ class BuildStation(Station):
 
     def draw_espresso_glass(self, screen, drink, x, y, width, height):
         """ Отрисовка стакана с эспрессо """
-        # Стакан
         glass_color = (240, 240, 240)
         py.draw.rect(screen, glass_color, (x, y, width, height))
         py.draw.rect(screen, (200, 200, 200), (x, y, width, height), 2)
 
-        # Цвет эспрессо
         espresso_color = CITY_ROAST
         if drink["espresso_type"] == "DECAF_ROAST":
             espresso_color = DECAF_ROAST
 
-        # Качество влияет на оттенок
         if drink["espresso_quality"] == "отличное":
             espresso_color = tuple(min(255, c + 20) for c in espresso_color)
         elif drink["espresso_quality"] == "среднее":
             espresso_color = tuple(min(255, c + 40) for c in espresso_color)
 
-        # Заполняем стакан эспрессо
         fill_height = (height - 15) * 0.6
         fill_y = y + height - fill_height - 5
         py.draw.rect(screen, espresso_color, (x + 2, fill_y, width - 4, fill_height))
 
-        # Пена эспрессо
         cream_color = tuple(min(255, c + 50) for c in espresso_color)
         cream_height = 10
         py.draw.rect(screen, cream_color, (x + 2, fill_y, width - 4, cream_height))
 
-        # Ножка стакана
         stem_width = width // 3
         stem_height = 10
         stem_x = x + (width - stem_width) // 2
@@ -1254,6 +1365,51 @@ class BuildStation(Station):
                         self.prev_page()
                     elif self.next_button.signal(pos) and self.current_start_index + self.max_visible_drinks < len(self.ready_drinks):
                         self.next_page()
+
+                # Обработка кнопок размеров (L, S, M)
+                if (self.assembly_boxes[0]["drink"] is not None and
+                        self.assembly_boxes[1]["drink"] is not None):
+                    for button in self.size_buttons:
+                        if button.visible and button.signal(pos):
+                            print(f"Выбран размер: {button.size}")
+                            # self.finalize_drink(button.size)
+
+                drink, index = self.get_drink_at_position(pos)
+                if drink:
+                    # Перетаскивание
+                    self.dragging_drink = drink
+                    drink["dragging"] = True
+                    cell_x = self.start_x + index * (self.cell_width + self.cell_spacing)
+                    cell_y = self.start_y + 40
+                    self.dragging_offset = (pos[0] - cell_x, pos[1] - cell_y)
+                    print(f"Начат перетаск напитка #{drink['id']}")
+
+            elif event.type == py.MOUSEMOTION:
+                # Перетаскивание напитка
+                if self.dragging_drink:
+                    self.dragging_drink["pos"] = (
+                        event.pos[0] - self.dragging_offset[0],
+                        event.pos[1] - self.dragging_offset[1]
+                    )
+
+            elif event.type == py.MOUSEBUTTONUP:
+                if self.dragging_drink:
+                    pos = event.pos
+                    box = self.get_box_at_position(pos)
+                    if box:
+                        box["drink"] = self.dragging_drink.copy()
+                        print(f"Напиток #{self.dragging_drink['id']} помещен в {box['name']}")
+
+                        visible_drinks = self.get_visible_drinks()
+                        global_index = self.current_start_index + visible_drinks.index(self.dragging_drink)
+                        if global_index < len(self.ready_drinks):
+                            self.ready_drinks.pop(global_index)
+                            print(f"Напиток удален из общего списка")
+
+                    self.dragging_drink["dragging"] = False
+                    self.dragging_drink["pos"] = None
+                    self.dragging_drink = None
+                    self.dragging_offset = (0, 0)
 
 class StationManager:
     """ Менеджер управления станциями """
