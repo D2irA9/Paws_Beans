@@ -1813,6 +1813,8 @@ class BuildStation(Station):
                     self.dragging_drink = None
                     self.dragging_offset = (0, 0)
 
+# class
+
 class StationManager:
     """ Менеджер управления станциями """
     def __init__(self):
