@@ -58,10 +58,3 @@ class DB:
 
 
 db = DB()
-db.connect()
-
-db.add_user("ivan_petrov", "ivan@example.com")
-db.add_user("maria_sidorova", "maria@example.com")
-db.add_user("alex_smirnov")
-
-db.close()

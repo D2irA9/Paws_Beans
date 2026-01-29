@@ -6,6 +6,7 @@ station_manager = StationManager()
 
 def game(events):
     """ Основной игрой цикл """
+    py.display.set_caption('Paws & Beans')
     for event in events:
         if event.type == py.QUIT:
             py.quit()

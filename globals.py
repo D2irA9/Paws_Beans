@@ -4,7 +4,7 @@ from classes.node import Label
 
 py.init()
 screen = py.display.set_mode((1200, 720))
-py.display.set_caption('Paws & Beans')
+# py.display.set_caption('Paws & Beans')
 
 # # # Цвет
 WHITE = (255, 255, 255)

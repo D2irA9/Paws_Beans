@@ -1848,11 +1848,6 @@ class StationManager:
         # Передаем ссылку на build_station в brew_station
         brew_station.build_station = build_station
 
-        # Отладочная информация
-        print("=== СВЯЗЬ СТАНЦИЙ ===")
-        print(f"BrewStation имеет ссылку на BuildStation: {brew_station.build_station is not None}")
-        print("=====================")
-
     def update_navigation(self):
         """ Обновление видимости и цветов кнопок навигации """
         current_nav = self.navigation_map[self.current_station]
