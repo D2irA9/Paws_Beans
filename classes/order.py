@@ -30,6 +30,7 @@ class Order:
         }
         self.current_order = self.generate_random_order()
         self.show_order = False
+        self.order_visible = False
 
     def generate_random_order(self):
         """Генерирует случайный заказ"""
@@ -53,7 +54,7 @@ class Order:
         }
 
     def draw_order(self, screen):
-        """ Отображение заказа """
+        """ Отображение тикета заказа """
         x, y = 920, 0
         width, height = 280, 400
 
@@ -140,7 +141,7 @@ class Order:
         screen.blit(cup_text, text_rect)
 
     def _draw_click_indicator(self, screen):
-        """ Отрисовка маленького квадратика """
+        """ Отрисовка мини тикета """
         x, y = 970, 0
         width, height = 50, 100
 
@@ -161,9 +162,11 @@ class Order:
                     self.show_order = not self.show_order
 
     def draw(self, screen):
-        if not self.show_order:
-            self._draw_click_indicator(screen)
-        else:
+        """ Отрисовка заказа """
+        if self.show_order  and self.order_visible:
             self.draw_order(screen)
+        else:
+            self._draw_click_indicator(screen)
+
 
 order = Order()

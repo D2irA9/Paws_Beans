@@ -117,5 +117,6 @@ class Character(py.sprite.Sprite):
         """ Отрисовка """
         screen.blit(self.image, self.rect)
 
-
-
+    def is_clicked(self, pos):
+        """Возвращает True если кликнули по персонажу"""
+        return self.rect.collidepoint(pos)

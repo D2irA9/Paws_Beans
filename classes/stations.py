@@ -61,7 +61,11 @@ class OrderStation(Station):
 
     def events(self, events):
         """ Обработка событий на станции """
-        pass
+        for event in events:
+            if event.type == py.MOUSEBUTTONDOWN and event.button == 1:
+                # Простая проверка
+                if self.nps.is_clicked(event.pos):
+                    order.order_visible = True
 
 class BrewStation(Station):
     """ Станция приготовления кофе """
