@@ -3,6 +3,7 @@ from classes.node import CircleButton, Button
 from abc import ABC, abstractmethod
 from classes.tiled import Map
 from classes.character import Character
+from classes.order import order
 
 class Station(ABC):
     """ Класс станции """
@@ -57,6 +58,7 @@ class OrderStation(Station):
         self.player.draw(screen)
         self.nps.update()
         self.nps.draw(screen)
+        order.draw_order(screen)
 
     def events(self, events):
         """ Обработка событий на станции """

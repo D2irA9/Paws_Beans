@@ -37,5 +37,8 @@ STRAWBERRY_MILK = (228, 172, 195)
 CITY_ROAST = (110, 59, 9)
 DECAF_ROAST = (70, 39, 6)
 
+# Заказ
+ORDER_TICKET = (255, 240, 173)
+
 # # # Переменные
 font = Label('assets/font/PixelizerBold.ttf')
