@@ -58,7 +58,6 @@ class OrderStation(Station):
         self.player.draw(screen)
         self.nps.update()
         self.nps.draw(screen)
-        order.draw_order(screen)
 
     def events(self, events):
         """ Обработка событий на станции """
@@ -1874,6 +1873,7 @@ class StationManager:
 
     def handle_events(self, events):
         """ Обработка событий для всех станций """
+        order.events(events)
         for event in events:
             if event.type == py.MOUSEBUTTONDOWN:
                 current_nav = self.navigation_map[self.current_station]
@@ -1905,6 +1905,7 @@ class StationManager:
         # Рисуем текущую станцию
         current_station = self.stations[self.current_station]
         current_station.draw(screen)
+        order.draw(screen)
 
         # Рисуем кнопки
         if self.show_right_button:
