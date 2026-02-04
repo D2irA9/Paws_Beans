@@ -144,12 +144,6 @@ class OrderStation(Station):
 
         print("=" * 50)
 
-    def generate_new_order(self):
-        """ Сгенерировать новый заказ """
-        print("Генерируем новый заказ...")
-        self.current_order = order.generate_random_order()
-        print(f"Новый заказ: Размер {self.current_order['cup']}, Эспрессо: {self.current_order['espresso']['portions']} порций, Молоко: {self.current_order['milk']['portions']} порций")
-
     def draw_completed_drink(self, screen):
         """ Отрисовка готового напитка в левом нижнем углу """
         if not self.completed_drink:
@@ -1448,7 +1442,7 @@ class BuildStation(Station):
         drink_color = self.get_drink_color(drink)
 
         if drink_type == "milk":
-            total_percentage = 20 * portions
+            total_percentage = (100 / 6) * portions
             item = {
                 "type": "milk",
                 "name": f"Молоко {milk_type}" if milk_type else "Молоко",
@@ -1460,7 +1454,7 @@ class BuildStation(Station):
                 "pour_progress": 0
             }
         elif drink_type == "espresso":
-            total_percentage = 20 * portions
+            total_percentage = (100 / 6) * portions
             item = {
                 "type": "espresso",
                 "name": f"Эспрессо {espresso_type}" if espresso_type else "Эспрессо",
@@ -1479,7 +1473,7 @@ class BuildStation(Station):
         else:
             self.top_bar_items.append(item)
 
-        print(f"Добавлен в полосу: {item['name']}")
+        print(f"Добавлен в полосу: {item['name']}, {portions} порций, {total_percentage:.1f}%")
 
     def show_size_buttons(self):
         """ Показать кнопки размеров """
@@ -1594,7 +1588,7 @@ class BuildStation(Station):
         self.reset_button.draw(screen)
 
         # Показываем кнопку
-        if self.final_glass["filled_percentage"] >= 90:
+        if self.final_glass["filled_percentage"] >= 20:
             self.complete_button.visible = True
             self.complete_button.draw(screen)
         else:
