@@ -40,5 +40,11 @@ DECAF_ROAST = (70, 39, 6)
 # Заказ
 ORDER_TICKET = (255, 240, 173)
 
+# Сиропы
+CHOCOLATE = (101, 67, 33)
+RED_VELVET = (178, 34, 34)
+SALTED_CARAMEL = (255, 193, 37)
+SUGARPLUM = (221, 160, 221)
+
 # # # Переменные
 font = Label('assets/font/PixelizerBold.ttf')

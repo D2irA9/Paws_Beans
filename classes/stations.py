@@ -44,8 +44,184 @@ class OrderStation(Station):
         self.map_loaded = False
 
         # Персонажи
-        self.player = Character(3, (530, 60), 'assets/sprites/characters/Adam_16x16.png', [(530,60)])
+        self.player = Character(3, (530, 60), 'assets/sprites/characters/Adam_16x16.png', [(530, 60)])
         self.nps = Character(3, (240, 0), 'assets/sprites/characters/Alex_16x16.png', [(240, 140), (530, 140), (530, 120)])
+
+        self.completed_drink = None
+        self.current_order = order.current_order
+        self.drink_rect = py.Rect(0, 0, 0, 0)
+
+    def add_completed_drink(self, drink_data):
+        """ Добавление готового напитка для отображения и сравнения с заказом """
+        self.completed_drink = drink_data.copy()
+        print(f"Получен напиток:")
+        print(f"    Размер: {drink_data.get('size')}")
+        print(f"    Заполнение: {drink_data.get('filled_percentage')}%")
+
+        # Сравниваем с текущим заказом
+        self.compare_with_order(drink_data)
+
+    def compare_with_order(self, drink_data):
+        """ Сравнить приготовленный напиток с текущим заказом """
+        if not self.current_order:
+            print("Нет активного заказа для сравнения")
+            return
+
+        print("=" * 50)
+        print("СРАВНЕНИЕ С ЗАКАЗОМ:")
+        print("=" * 50)
+
+        # 1. Сравнение размера стакана
+        order_size = self.current_order['cup']
+        drink_size = drink_data.get('size', 'M')
+        size_match = (order_size == drink_size)
+
+        print(f"Размер: Заказ - {order_size}, Напиток - {drink_size} {'✓' if size_match else '✗'}")
+
+        # 2. Сравнение общего заполнения
+        order_capacity = self.current_order['cup_capacity']
+        drink_total = drink_data.get('total_portions', 0)
+        capacity_match = (order_capacity == drink_total)
+
+        print(f"Общее заполнение: Заказ - {order_capacity}, Напиток - {drink_total} {'✓' if capacity_match else '✗'}")
+
+        # 3. Сравнение эспрессо
+        order_espresso = self.current_order['espresso']
+        drink_espresso = drink_data.get('espresso_portions', 0)
+        espresso_match = (order_espresso['portions'] == drink_espresso)
+
+        print(f"Эспрессо: Заказ - {order_espresso['portions']} порций, Напиток - {drink_espresso} порций {'✓' if espresso_match else '✗'}")
+
+        # 4. Сравнение молока
+        order_milk = self.current_order['milk']
+        drink_milk = drink_data.get('milk_portions', 0)
+        milk_match = (order_milk['portions'] == drink_milk)
+
+        print(f"Молоко: Заказ - {order_milk['portions']} порций, Напиток - {drink_milk} порций {'✓' if milk_match else '✗'}")
+
+        # 5. Проверка типа молока
+        if drink_data.get('milk_type'):
+            milk_type_match = (order_milk['type'].lower() == drink_data.get('milk_type', '').lower())
+            print(f"Тип молока: Заказ - {order_milk['type']}, Напиток - {drink_data.get('milk_type', 'Нет')} {'✓' if milk_type_match else '✗'}")
+
+        # 6. Проверка температуры молока
+        if drink_data.get('milk_temp'):
+            milk_temp_match = (order_milk['temperature'].lower() == drink_data.get('milk_temp', '').lower())
+            print(f"Температура молока: Заказ - {order_milk['temperature']}, Напиток - {drink_data.get('milk_temp', 'Нет')} {'✓' if milk_temp_match else '✗'}")
+
+        # 7. Проверка наличия сиропа
+        order_syrup = self.current_order.get('syrup')
+        drink_has_syrup = drink_data.get('has_syrup', False)
+        syrup_match = (order_syrup is not None and drink_has_syrup)
+
+        if order_syrup:
+            print(f"Сироп: Заказ - {order_syrup}, Напиток - {'Есть' if drink_has_syrup else 'Нет'} {'✓' if syrup_match else '✗'}")
+
+        # Подсчет общего совпадения
+        matches = [size_match, capacity_match, espresso_match, milk_match]
+        if drink_data.get('milk_type'):
+            matches.append(milk_type_match)
+        if drink_data.get('milk_temp'):
+            matches.append(milk_temp_match)
+        if order_syrup:
+            matches.append(syrup_match)
+
+        total_matches = sum(matches)
+        total_checks = len(matches)
+        match_percentage = (total_matches / total_checks) * 100 if total_checks > 0 else 0
+
+        print("=" * 50)
+        print(f"ИТОГ: {total_matches}/{total_checks} ({match_percentage:.0f}%)")
+
+        if match_percentage >= 80:
+            print("✓ ОТЛИЧНО! Напиток соответствует заказу!")
+        elif match_percentage >= 60:
+            print("✓ ХОРОШО! Напиток в целом соответствует заказу")
+        elif match_percentage >= 40:
+            print("⚠ НЕПЛОХО! Но есть расхождения")
+        else:
+            print("✗ ПОЛУЧИЛОСЬ НЕ ТО! Нужно переделать")
+
+        print("=" * 50)
+
+    def generate_new_order(self):
+        """ Сгенерировать новый заказ """
+        print("Генерируем новый заказ...")
+        self.current_order = order.generate_random_order()
+        print(f"Новый заказ: Размер {self.current_order['cup']}, Эспрессо: {self.current_order['espresso']['portions']} порций, Молоко: {self.current_order['milk']['portions']} порций")
+
+    def draw_completed_drink(self, screen):
+        """ Отрисовка готового напитка в левом нижнем углу """
+        if not self.completed_drink:
+            return
+
+        # Координаты для отображения напитка
+        drink_x = 20
+        drink_y = 500
+        drink_width = 120
+        drink_height = 150
+
+        # Сохраняем координаты для клика
+        self.drink_rect = py.Rect(drink_x - 10, drink_y - 35, drink_width + 20, drink_height + 40 + 30)
+        # Фон для напитка
+        bg_rect = (drink_x - 10, drink_y - 10, drink_width + 20, drink_height + 40)
+        py.draw.rect(screen, (50, 50, 80), bg_rect)
+        py.draw.rect(screen, (70, 70, 100), bg_rect, 3)
+
+        # Стакан
+        glass_color = (240, 240, 240)
+        py.draw.rect(screen, glass_color, (drink_x, drink_y, drink_width, drink_height))
+        py.draw.rect(screen, (200, 200, 200), (drink_x, drink_y, drink_width, drink_height), 2)
+
+        # Заполнение стакана
+        filled_percentage = self.completed_drink.get("filled_percentage", 0)
+        if filled_percentage > 0:
+            # Определяем цвет заполнения
+            base_color = self.completed_drink.get("base_color")
+            syrup_color = self.completed_drink.get("syrup_color")
+            has_syrup = self.completed_drink.get("has_syrup", False)
+
+            draw_color = base_color
+            if has_syrup and syrup_color:
+                if draw_color:
+                    draw_color = (
+                        (draw_color[0] + syrup_color[0]) // 2,
+                        (draw_color[1] + syrup_color[1]) // 2,
+                        (draw_color[2] + syrup_color[2]) // 2
+                    )
+                else:
+                    draw_color = syrup_color
+
+            if draw_color:
+                fill_height = int(drink_height * (filled_percentage / 100))
+                fill_y = drink_y + drink_height - fill_height
+
+                py.draw.rect(screen, draw_color, (drink_x + 2, fill_y, drink_width - 4, fill_height))
+                py.draw.rect(screen, (220, 220, 220), (drink_x + 2, fill_y, drink_width - 4, fill_height), 1)
+
+        # Ножка стакана
+        stem_width = drink_width // 3
+        stem_height = 15
+        stem_x = drink_x + (drink_width - stem_width) // 2
+        stem_y = drink_y + drink_height
+        py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
+
+        # Информация о напитке
+        info_font = py.font.Font(None, 18)
+
+        # Размер
+        size = self.completed_drink.get("size", "M")
+        size_text = f"Размер: {size}"
+        size_surface = info_font.render(size_text, True, (200, 200, 255))
+        screen.blit(size_surface, (drink_x, stem_y + stem_height + 5))
+
+        # Портции
+        milk_portions = self.completed_drink.get("milk_portions", 0)
+        espresso_portions = self.completed_drink.get("espresso_portions", 0)
+        if milk_portions > 0 or espresso_portions > 0:
+            portions_text = f"М: {milk_portions} Э: {espresso_portions}"
+            portions_surface = info_font.render(portions_text, True, (255, 200, 200))
+            screen.blit(portions_surface, (drink_x, stem_y + stem_height + 25))
 
     def draw(self, screen):
         """ Отрисовка станции заказов """
@@ -58,14 +234,25 @@ class OrderStation(Station):
         self.player.draw(screen)
         self.nps.update()
         self.nps.draw(screen)
+        self.draw_completed_drink(screen)
 
     def events(self, events):
         """ Обработка событий на станции """
         for event in events:
             if event.type == py.MOUSEBUTTONDOWN and event.button == 1:
-                # Простая проверка
+                # Проверка клика на NPC
                 if self.nps.is_clicked(event.pos):
                     order.order_visible = True
+
+                # Проверка клика на готовый напиток
+                if (self.completed_drink is not None and
+                        hasattr(self, 'drink_rect') and
+                        self.drink_rect is not None and
+                        self.drink_rect.collidepoint(event.pos)):
+                    print("=" * 50)
+                    print("ПРОВЕРКА КАЧЕСТВА НАПИТКА")
+                    print("=" * 50)
+                    self.compare_with_order(self.completed_drink)
 
 class BrewStation(Station):
     """ Станция приготовления кофе """
@@ -919,7 +1106,8 @@ class BrewStation(Station):
                 self.build_station.add_ready_drink(
                     drink_type="espresso",
                     espresso_type=cell["selected_espresso_type"],
-                    espresso_quality=quality
+                    espresso_quality=quality,
+                    portions=cell["selected_espresso_portion"]  
                 )
             else:
                 print("ОШИБКА: BuildStation не подключена!")
@@ -1067,7 +1255,8 @@ class BrewStation(Station):
             self.build_station.add_ready_drink(
                 drink_type="milk",
                 milk_type=cell["selected_milk_type"],
-                milk_temp=cell["selected_milk_temp"]
+                milk_temp=cell["selected_milk_temp"],
+                portions=portions
             )
         else:
             print("ОШИБКА: BuildStation не подключена к BrewStation!")
@@ -1083,6 +1272,7 @@ class BuildStation(Station):
         # Выбранный размер и финальный стакан
         self.selected_size = None
         self.show_final_stage = False
+        self.order_station = None
 
         # Параметры для финального стакана
         self.final_glass = {
@@ -1097,7 +1287,11 @@ class BuildStation(Station):
             "pour_start_time": 0,
             "base_color": None,
             "syrup_color": None,
-            "has_syrup": False
+            "has_syrup": False,
+            "milk_portions": 0,
+            "espresso_portions": 0,
+            "total_portions": 0,
+            "max_portions": 0
         }
 
         # Горизонтальная полоса с элементами над стаканом
@@ -1155,14 +1349,50 @@ class BuildStation(Station):
             }
         ]
 
+        self.complete_button = Button(150, 40, GREEN, (525, 600))
+        self.complete_button.visible = False
+        self.complete_button.text = "ГОТОВО"
+
+    def complete_drink(self):
+        """ Завершить создание напитка и передать в OrderStation """
+        if not self.order_station:
+            print("ОШИБКА: OrderStation не подключена к BuildStation!")
+            return
+
+        # Собираем данные о готовом напитке
+        drink_data = {
+            "size": self.selected_size,
+            "filled_percentage": self.final_glass["filled_percentage"],
+            "base_color": self.final_glass["base_color"],
+            "syrup_color": self.final_glass["syrup_color"],
+            "has_syrup": self.final_glass["has_syrup"],
+            "milk_portions": self.final_glass["milk_portions"],
+            "espresso_portions": self.final_glass["espresso_portions"],
+            "total_portions": self.final_glass["total_portions"]
+        }
+
+        # Передаем напиток в OrderStation
+        self.order_station.add_completed_drink(drink_data)
+
+        # Сбрасываем станцию сборки
+        self.reset_all()
+
+        print("=" * 50)
+        print("Напиток завершен и передан в OrderStation!")
+        print(f"Размер: {drink_data['size']}")
+        print(f"Заполнение: {drink_data['filled_percentage']}%")
+        print(f"Молоко: {drink_data['milk_portions']} порций")
+        print(f"Эспрессо: {drink_data['espresso_portions']} порций")
+        print("=" * 50)
+
     def init_top_bar_items(self):
         """ Инициализация горизонтальной полосы над стаканом """
         # Сиропы
         syrups = [
-            {"type": "syrup", "name": "Шоколадный", "color": (101, 67, 33)},
-            {"type": "syrup", "name": "Красный бархат", "color": (178, 34, 34)},
-            {"type": "syrup", "name": "Солёная карамель", "color": (255, 193, 37)},
-            {"type": "syrup", "name": "Сахарный сироп", "color": (255, 250, 240)}
+            {"type": "syrup", "name": "Шоколадный", "color": CHOCOLATE},
+            {"type": "syrup", "name": "Красный бархат", "color": RED_VELVET},
+            {"type": "syrup", "name": "Солёная карамель", "color": SALTED_CARAMEL},
+            {"type": "syrup", "name": "Сахарный сироп", "color": SUGARPLUM}
         ]
 
         # Промежуток
@@ -1189,7 +1419,7 @@ class BuildStation(Station):
             button.visible = False
             self.size_buttons.append(button)
 
-    def add_ready_drink(self, drink_type, milk_type=None, milk_temp=None, espresso_type=None, espresso_quality=None):
+    def add_ready_drink(self, drink_type, milk_type=None, milk_temp=None, espresso_type=None, espresso_quality=None, portions=1):
         """ Добавить готовый напиток на станцию сборки """
         drink = {
             "type": drink_type,
@@ -1197,6 +1427,7 @@ class BuildStation(Station):
             "milk_temp": milk_temp,
             "espresso_type": espresso_type,
             "espresso_quality": espresso_quality,
+            "portions": portions,
             "id": len(self.ready_drinks),
             "dragging": False,
             "pos": None,
@@ -1206,6 +1437,7 @@ class BuildStation(Station):
         print("=" * 50)
         print(f"Добавлен напиток В BuildStation:")
         print(f"   Тип: {drink_type}")
+        print(f"    Порции: {portions}")
         if milk_type:
             print(f"   Молоко: {milk_type}, Температура: {milk_temp}")
         if espresso_type:
@@ -1216,21 +1448,25 @@ class BuildStation(Station):
         drink_color = self.get_drink_color(drink)
 
         if drink_type == "milk":
+            total_percentage = 20 * portions
             item = {
                 "type": "milk",
                 "name": f"Молоко {milk_type}" if milk_type else "Молоко",
                 "color": drink_color,
-                "percentage": 60,  # Молоко заполняет 60%
+                "percentage": total_percentage,
+                "portions": portions,
                 "drink_data": drink.copy(),
                 "pouring": False,
                 "pour_progress": 0
             }
         elif drink_type == "espresso":
+            total_percentage = 20 * portions
             item = {
                 "type": "espresso",
                 "name": f"Эспрессо {espresso_type}" if espresso_type else "Эспрессо",
                 "color": drink_color,
-                "percentage": 100,  # Эспрессо заполняет 40%
+                "percentage": total_percentage,
+                "portions": portions,
                 "drink_data": drink.copy(),
                 "pouring": False,
                 "pour_progress": 0
@@ -1279,7 +1515,7 @@ class BuildStation(Station):
         return self.ready_drinks[self.current_start_index:end_index]
 
     def get_visible_bar_items(self):
-        """ Получить видимые элементы из полосы (листание по кругу) """
+        """ Получить видимые элементы из полосы """
         if not self.top_bar_items:
             return []
 
@@ -1353,9 +1589,16 @@ class BuildStation(Station):
         # Рисуем серую полосу над стаканом
         self.draw_top_bar(screen)
 
-        # Рисуем кнопку сброса
+        # Рисуем кнопки
         self.reset_button.visible = True
         self.reset_button.draw(screen)
+
+        # Показываем кнопку
+        if self.final_glass["filled_percentage"] >= 90:
+            self.complete_button.visible = True
+            self.complete_button.draw(screen)
+        else:
+            self.complete_button.visible = False
 
     def draw_top_bar(self, screen):
         """ Отрисовка горизонтальной полосы над стаканом """
@@ -1441,15 +1684,17 @@ class BuildStation(Station):
         center_x = screen.get_width() // 2
         center_y = 350
 
-        # Определяем размер стакана
-        if self.selected_size == "S":
-            glass_height = 180
-        elif self.selected_size == "M":
-            glass_height = 150
-        elif self.selected_size == "L":
-            glass_height = 120
-        else:
-            glass_height = 150
+        size_params = {
+            'S': {'height': 180, 'max_portions': 6},
+            'M': {'height': 150, 'max_portions': 5},
+            'L': {'height': 120, 'max_portions': 4}
+        }
+        params = size_params.get(self.selected_size, {'height': 150, 'max_portions': 5})
+        glass_height = params['height']
+        max_portions = params['max_portions']
+
+        # Сохраняем максимальное количество порций
+        self.final_glass["max_portions"] = max_portions
 
         glass_width = 120
 
@@ -1500,6 +1745,25 @@ class BuildStation(Station):
         stem_y = y + glass_height
         py.draw.rect(screen, (210, 210, 210), (stem_x, stem_y, stem_width, stem_height))
 
+        # Информация о порциях
+        info_font = py.font.Font(None, 20)
+
+        # Общее количество порций
+        total_text = f"Порций: {self.final_glass['total_portions']}/{max_portions}"
+        total_surface = info_font.render(total_text, True, (255, 255, 255))
+        screen.blit(total_surface, (x, stem_y + stem_height + 5))
+
+        # Детализация по типам
+        if self.final_glass['milk_portions'] > 0:
+            milk_text = f"Молоко: {self.final_glass['milk_portions']}"
+            milk_surface = info_font.render(milk_text, True, (200, 200, 255))
+            screen.blit(milk_surface, (x, stem_y + stem_height + 25))
+
+        if self.final_glass['espresso_portions'] > 0:
+            espresso_text = f"Эспрессо: {self.final_glass['espresso_portions']}"
+            espresso_surface = info_font.render(espresso_text, True, (255, 200, 200))
+            screen.blit(espresso_surface, (x, stem_y + stem_height + 45))
+
     def update_pouring(self):
         """ Обновление процесса наливания """
         current_time = py.time.get_ticks()
@@ -1519,6 +1783,23 @@ class BuildStation(Station):
                     # Завершаем наливание
                     self.complete_pouring(item)
 
+    def _mix_colors(self, color1, color2, weight=0.5):
+        """ Смешать два цвета с заданным весом """
+        if color1 is None:
+            return color2
+        if color2 is None:
+            return color1
+
+        r1, g1, b1 = color1
+        r2, g2, b2 = color2
+
+        # Смешивание с учетом веса
+        r = int(r1 * (1 - weight) + r2 * weight)
+        g = int(g1 * (1 - weight) + g2 * weight)
+        b = int(b1 * (1 - weight) + b2 * weight)
+
+        return (r, g, b)
+
     def complete_pouring(self, item):
         """ Завершение наливания элемента в стакан """
         item["pouring"] = False
@@ -1534,14 +1815,63 @@ class BuildStation(Station):
             print(f"Цвет стакана изменен")
 
         elif item["type"] in ["milk", "espresso"]:
-            # Напиток заполняет стакан
-            if self.final_glass["filled_percentage"] + item["percentage"] <= 100:
+            # Проверяем можно ли добавить
+            if self.can_add_to_glass(item):
+                # Обновляем проценты и количество порций
                 self.final_glass["filled_percentage"] += item["percentage"]
-                self.final_glass["base_color"] = item["color"]
-                print(f"Добавлено: {item['name']} ({item['percentage']}%)")
-                print(f"Всего заполнено: {self.final_glass['filled_percentage']}%")
+
+                # Обновляем счетчики порций
+                if item["type"] == "milk":
+                    self.final_glass["milk_portions"] += item.get("portions", 1)
+                else:  # espresso
+                    self.final_glass["espresso_portions"] += item.get("portions", 1)
+
+                self.final_glass["total_portions"] += item.get("portions", 1)
+
+                # Упрощенное смешивание цветов
+                if self.final_glass["base_color"] is None:
+                    self.final_glass["base_color"] = item["color"]
+                else:
+                    # Простое усреднение цветов
+                    base_r, base_g, base_b = self.final_glass["base_color"]
+                    item_r, item_g, item_b = item["color"]
+
+                    # Средний цвет
+                    self.final_glass["base_color"] = (
+                        (base_r + item_r) // 2,
+                        (base_g + item_g) // 2,
+                        (base_b + item_b) // 2
+                    )
+
+                print(f"Добавлено: {item['name']}")
+                print(f"  Порций: {item.get('portions', 1)}")
+                print(f"  Заполнение: +{item['percentage']}%")
+                print(f"  Всего заполнено: {self.final_glass['filled_percentage']}%")
+                print(f"  Всего порций: {self.final_glass['total_portions']}/{self.final_glass['max_portions']}")
+                print(f"  Молоко: {self.final_glass['milk_portions']} порций")
+                print(f"  Эспрессо: {self.final_glass['espresso_portions']} порций")
             else:
                 print("Стакан переполнен!")
+
+    def can_add_to_glass(self, item):
+        """ Проверить, можно ли добавить элемент в стакан """
+        if item["type"] == "syrup":
+            return True  # Сироп всегда можно добавить
+
+        # Проверяем по количеству порций
+        current_portions = self.final_glass["total_portions"]
+        item_portions = item.get("portions", 1)
+        max_portions = self.final_glass["max_portions"]
+
+        if current_portions + item_portions > max_portions:
+            print(f"Нельзя добавить: будет {current_portions + item_portions} порций, максимум {max_portions}")
+            return False
+
+        # Также проверяем по проценту (на всякий случай)
+        current_fill = self.final_glass["filled_percentage"]
+        item_fill = item["percentage"]
+
+        return current_fill + item_fill <= 100
 
     def handle_final_stage_events(self, event, pos):
         """ Обработка событий на финальной стадии """
@@ -1549,6 +1879,11 @@ class BuildStation(Station):
             # Обработка кнопки сброса
             if self.reset_button.signal(pos):
                 self.reset_all()
+                return
+
+            # Обработка кнопки "ГОТОВО"
+            if self.complete_button.visible and self.complete_button.signal(pos):
+                self.complete_drink()
                 return
 
             # Листание полосы по кругу
@@ -1614,6 +1949,10 @@ class BuildStation(Station):
         self.final_glass["base_color"] = None
         self.final_glass["syrup_color"] = None
         self.final_glass["has_syrup"] = False
+        self.final_glass["milk_portions"] = 0
+        self.final_glass["espresso_portions"] = 0
+        self.final_glass["total_portions"] = 0
+        self.final_glass["max_portions"] = 0
 
         # Останавливаем все наливания в полосе
         for item in self.top_bar_items:
@@ -1818,8 +2157,6 @@ class BuildStation(Station):
                     self.dragging_drink = None
                     self.dragging_offset = (0, 0)
 
-# class
-
 class StationManager:
     """ Менеджер управления станциями """
     def __init__(self):
@@ -1849,9 +2186,17 @@ class StationManager:
         """ Связываем станции между собой """
         brew_station = self.stations["brew"]
         build_station = self.stations["build"]
+        order_station = self.stations["order"]
 
         # Передаем ссылку на build_station в brew_station
         brew_station.build_station = build_station
+        # Передаем ссылку на build_station в order_station
+        build_station.order_station = order_station
+        print("=" * 50)
+        print("Станции успешно связаны:")
+        print(f"  BrewStation -> BuildStation: {'✓' if brew_station.build_station == build_station else '✗'}")
+        print(f"  BuildStation -> OrderStation: {'✓' if build_station.order_station == order_station else '✗'}")
+        print("=" * 50)
 
     def update_navigation(self):
         """ Обновление видимости и цветов кнопок навигации """

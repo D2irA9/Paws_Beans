@@ -1,43 +1,65 @@
-from globals import *
 import random
+from globals import *
 
 class Order:
     """ Класс заказов """
     def __init__(self):
         self.milk = ['SKIM_MILK', 'STRAWBERRY_MILK']
+        self.milk_temperatures = ['HOT', 'COLD']
         self.espresso = ['CITY_ROAST', 'DECAF_ROAST']
         self.cup_capacity = {'S': 6, 'M': 5, 'L': 4}
         self.syrups = ['CHOCOLATE', 'RED_VELVET', 'SALTED_CARAMEL', 'SUGARPLUM']
 
         # Цвета для сиропов
         self.syrup_colors = {
-            'CHOCOLATE': (139, 69, 19),  # Коричневый
-            'RED_VELVET': (178, 34, 34),  # Красный бархат
-            'SALTED_CARAMEL': (210, 180, 140),  # Карамельный
-            'SUGARPLUM': (221, 160, 221)  # Сливовый
+            'CHOCOLATE': CHOCOLATE,
+            'RED_VELVET': RED_VELVET,
+            'SALTED_CARAMEL': SALTED_CARAMEL,
+            'SUGARPLUM': SUGARPLUM
         }
 
         # Цвета для молока
         self.milk_colors = {
-            'SKIM_MILK': (255, 250, 240),  # Обезжиренное
-            'STRAWBERRY_MILK': (255, 182, 193)  # Клубничное
+            'SKIM_MILK': SKIM_MILK,
+            'STRAWBERRY_MILK': STRAWBERRY_MILK
+        }
+
+        self.temperature_symbols = {
+            'HOT': 'Г',
+            'COLD': 'Х'
         }
 
         # Цвета для эспрессо
         self.espresso_colors = {
-            'CITY_ROAST': (101, 67, 33),  # Темный
-            'DECAF_ROAST': (139, 90, 43)  # Светлее
+            'CITY_ROAST': CITY_ROAST,
+            'DECAF_ROAST': DECAF_ROAST
         }
+
         self.current_order = self.generate_random_order()
         self.show_order = False
         self.order_visible = False
+        self.milk = ['SKIM_MILK', 'STRAWBERRY_MILK']
+        self.espresso = ['CITY_ROAST', 'DECAF_ROAST']
+        self.cup_capacity = {'S': 6, 'M': 5, 'L': 4}
+        self.syrups = ['CHOCOLATE', 'RED_VELVET', 'SALTED_CARAMEL', 'SUGARPLUM']
 
     def generate_random_order(self):
-        """Генерирует случайный заказ"""
+        """Генерирует случайный заказ с гибким распределением порций"""
         cup = random.choice(['S', 'M', 'L'])
         capacity = self.cup_capacity[cup]
-        max_esp = max(1, capacity - 2)
-        esp_qty = random.randint(1, max_esp)
+
+        esp_qty = random.randint(1, min(3, capacity - 1))
+        milk_qty = capacity - esp_qty
+        if milk_qty > 4:
+            milk_qty = random.randint(1, min(4, capacity - 1))
+            esp_qty = capacity - milk_qty
+
+        milk_temp = random.choice(self.milk_temperatures)
+
+        print(f"Сгенерирован заказ: размер {cup}, емкость {capacity}")
+        print(f"  Эспрессо: {esp_qty} порций (допустимо 1-3)")
+        print(f"  Молоко: {milk_qty} порций (допустимо 1-4)")
+        print(f"  Сумма: {esp_qty + milk_qty} порций")
 
         return {
             'cup': cup,
@@ -48,7 +70,8 @@ class Order:
             },
             'milk': {
                 'type': random.choice(self.milk),
-                'portions': capacity - esp_qty
+                'portions': milk_qty,
+                'temperature': milk_temp
             },
             'syrup': random.choice(self.syrups)
         }
@@ -118,6 +141,14 @@ class Order:
         milk_qty_text = milk_font.render(f"x{self.current_order['milk']['portions']}", True, (0, 0, 0))
         screen.blit(milk_type_text, (x + 10, y + 10))
         screen.blit(milk_qty_text, (x + 10, y + 40))
+
+        # Температура молока
+        temp_symbol = self.temperature_symbols.get(self.current_order['milk']['temperature'], '?')
+        temp_text = milk_font.render(f"{temp_symbol} {self.current_order['milk']['temperature']}",  True, BLACK)
+
+        screen.blit(milk_type_text, (x + 10, y + 10))
+        screen.blit(milk_qty_text, (x + 10, y + 40))
+        screen.blit(temp_text, (x + 10, y + 70))
 
         # Текст для эспрессо
         espresso_type_text = milk_font.render(self.current_order['espresso']['type'], True, (255, 255, 255))

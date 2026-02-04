@@ -18,13 +18,15 @@ username = None
 
 SESSION_FILE = "user_session.json"
 
+current_user_id, current_username = None, None
+
 def check_session():
     """ Проверка, есть ли сохраненная сессия """
     try:
         if os.path.exists(SESSION_FILE):
             with open(SESSION_FILE, 'r', encoding='utf-8') as f:
                 data = f.read().strip()
-                if data:  # Если файл не пустой
+                if data:
                     session = json.loads(data)
                     if 'user_id' in session and 'username' in session:
                         global current_user_id, current_username

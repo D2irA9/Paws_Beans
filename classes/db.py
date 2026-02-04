@@ -31,10 +31,10 @@ class DB:
         """Добавление пользователя"""
         try:
             query = """
-            INSERT INTO `users` (username, mail, date_registration)
-            VALUES (%s, %s, NOW())
+                INSERT INTO `users` (username)
+                VALUES (%s)
             """
-            params = (username, mail)
+            params = (username)
 
             self.cursor.execute(query, params)
             self.connection.commit()
