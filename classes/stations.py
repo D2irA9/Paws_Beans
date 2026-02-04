@@ -48,6 +48,7 @@ class OrderStation(Station):
         self.nps = Character(3, (240, 0), 'assets/sprites/characters/Alex_16x16.png', [(240, 140), (530, 140), (530, 120)])
 
         self.completed_drink = None
+        self.draw_drink = True
         self.current_order = order.current_order
         self.drink_rect = py.Rect(0, 0, 0, 0)
 
@@ -223,7 +224,8 @@ class OrderStation(Station):
         self.player.draw(screen)
         self.nps.update()
         self.nps.draw(screen)
-        self.draw_completed_drink(screen)
+        if self.draw_drink:
+            self.draw_completed_drink(screen)
 
     def events(self, events):
         """ Обработка событий на станции """
@@ -237,6 +239,8 @@ class OrderStation(Station):
                 elif (self.completed_drink is not None and hasattr(self, 'drink_rect') and self.drink_rect is not None and self.drink_rect.collidepoint(event.pos)):
                     self.compare_with_order(self.completed_drink)
                     self.nps.set_path([(530, 120), (530, 140), (400, 140), (400, 230)])
+                    order.order_visible = False
+                    self.draw_drink = False
 
 class BrewStation(Station):
     """ Станция приготовления кофе """
