@@ -66,11 +66,6 @@ class OrderStation(Station):
         if not self.current_order:
             print("Нет активного заказа для сравнения")
             return
-
-        print("=" * 50)
-        print("СРАВНЕНИЕ С ЗАКАЗОМ:")
-        print("=" * 50)
-
         # 1. Сравнение размера стакана
         order_size = self.current_order['cup']
         drink_size = drink_data.get('size', 'M')
@@ -239,14 +234,9 @@ class OrderStation(Station):
                     order.order_visible = True
 
                 # Проверка клика на готовый напиток
-                if (self.completed_drink is not None and
-                        hasattr(self, 'drink_rect') and
-                        self.drink_rect is not None and
-                        self.drink_rect.collidepoint(event.pos)):
-                    print("=" * 50)
-                    print("ПРОВЕРКА КАЧЕСТВА НАПИТКА")
-                    print("=" * 50)
+                elif (self.completed_drink is not None and hasattr(self, 'drink_rect') and self.drink_rect is not None and self.drink_rect.collidepoint(event.pos)):
                     self.compare_with_order(self.completed_drink)
+                    self.nps.set_path([(530, 120), (530, 140), (400, 140), (400, 230)])
 
 class BrewStation(Station):
     """ Станция приготовления кофе """
