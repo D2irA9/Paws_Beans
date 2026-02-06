@@ -48,11 +48,21 @@ class Order:
         cup = random.choice(['S', 'M', 'L'])
         capacity = self.cup_capacity[cup]
 
-        esp_qty = random.randint(1, min(3, capacity - 1))
+        max_espresso = min(3, capacity)
+        esp_qty = random.randint(1, max_espresso)
+
         milk_qty = capacity - esp_qty
+
         if milk_qty > 4:
-            milk_qty = random.randint(1, min(4, capacity - 1))
+            milk_qty = random.randint(1, 4)
             esp_qty = capacity - milk_qty
+
+        if esp_qty > 3:
+            esp_qty = 3
+            milk_qty = capacity - esp_qty
+        elif esp_qty < 1:
+            esp_qty = 1
+            milk_qty = capacity - esp_qty
 
         milk_temp = random.choice(self.milk_temperatures)
 

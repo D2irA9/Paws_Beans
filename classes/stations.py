@@ -236,9 +236,14 @@ class OrderStation(Station):
                     order.order_visible = True
 
                 # Проверка клика на готовый напиток
-                elif (self.completed_drink is not None and hasattr(self, 'drink_rect') and self.drink_rect is not None and self.drink_rect.collidepoint(event.pos)):
+                elif (self.completed_drink is not None and hasattr(self, 'drink_rect') and
+                      self.drink_rect is not None and self.drink_rect.collidepoint(event.pos)):
                     self.compare_with_order(self.completed_drink)
-                    self.nps.set_path([(530, 120), (530, 140), (400, 140), (400, 230)])
+
+                    # Задаем путь для NPC
+                    self.nps.set_path([(530, 120), (530, 140), (420, 140), (420, 200)])
+
+                    # Скрываем заказ и напиток
                     order.order_visible = False
                     self.draw_drink = False
 

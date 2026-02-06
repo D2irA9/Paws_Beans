@@ -19,6 +19,9 @@ class Character(py.sprite.Sprite):
             'walk_up': self.load_animation_frames(64, 96, 6),
             'walk_left': self.load_animation_frames(64, 192, 6),
             'walk_right': self.load_animation_frames(64, 0, 6),
+
+            'sit_left': self.load_animation_frames(160, 96, 6),
+            'right_sit': self.load_animation_frames(160, 0, 6),
         }
         self.current_animation = 'idle_down'
         self.current_frame = 0
@@ -68,6 +71,13 @@ class Character(py.sprite.Sprite):
         if self.is_moving and self.target_pos:
             self.move_to_target()
 
+        # Автоматически садимся при достижении конечной точки (400, 230)
+        if (not self.is_moving and self.pos == [420, 200] and
+                self.current_animation != 'sit_left'):
+            self.current_animation = 'sit_left'
+            self.current_frame = 0
+            self.image = self.animations[self.current_animation][self.current_frame]
+
     def move_to_target(self):
         """ Плавное движение к целевой точке """
         target_x, target_y = self.target_pos
@@ -110,8 +120,22 @@ class Character(py.sprite.Sprite):
             self.is_moving = False
             self.path = []
             self.current_path_index = 0
-            if 'walk' in self.current_animation:
+            if 'walk' in self.current_animation and 'sit' not in self.current_animation:
                 self.current_animation = self.current_animation.replace('walk', 'idle')
+
+    def sit_down(self, sit_animation='sit_left'):
+        """ Заставить персонажа сесть """
+        self.is_moving = False
+        self.path = []
+        self.current_path_index = 0
+        self.target_pos = None
+
+        if sit_animation in self.animations:
+            self.current_animation = sit_animation
+            self.current_frame = 0
+            self.image = self.animations[self.current_animation][self.current_frame]
+        else:
+            print(f"Анимация {sit_animation} не найдена!")
 
     def draw(self, screen):
         """ Отрисовка """
