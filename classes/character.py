@@ -72,7 +72,7 @@ class Character(py.sprite.Sprite):
             self.move_to_target()
 
         # Автоматически садимся при достижении конечной точки (400, 230)
-        if (not self.is_moving and self.pos == [420, 200] and
+        if (not self.is_moving and self.pos == [420, 220] and
                 self.current_animation != 'sit_left'):
             self.current_animation = 'sit_left'
             self.current_frame = 0

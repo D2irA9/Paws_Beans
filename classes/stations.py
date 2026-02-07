@@ -3,7 +3,8 @@ from classes.node import CircleButton, Button
 from abc import ABC, abstractmethod
 from classes.tiled import Map
 from classes.character import Character
-from classes.order import order
+from classes.obj import order
+import random, time
 
 class Station(ABC):
     """ Класс станции """
@@ -45,12 +46,34 @@ class OrderStation(Station):
 
         # Персонажи
         self.player = Character(3, (530, 60), 'assets/sprites/characters/Adam_16x16.png', [(530, 60)])
-        self.nps = Character(3, (240, 0), 'assets/sprites/characters/Alex_16x16.png', [(240, 140), (530, 140), (530, 120)])
+
+        # Список доступных NPC
+        self.npc_sprites = [
+            'assets/sprites/characters/Alex_16x16.png',
+            'assets/sprites/characters/Amelia_16x16.png',
+            'assets/sprites/characters/Bob_16x16.png'
+        ]
+
+        # Создаем NPC
+        self.nps = None
+        self.spawn_npc()
 
         self.completed_drink = None
         self.draw_drink = True
         self.current_order = order.current_order
         self.drink_rect = py.Rect(0, 0, 0, 0)
+
+        self.npc_sit_timer = None
+        self.npc_return_path = [(420, 140), (530, 140), (240, 140), (240, 0)]
+        self.npc_is_leaving = False
+
+    def spawn_npc(self):
+        """ Создать нового случайного NPC """
+        random_npc_sprite = random.choice(self.npc_sprites)
+        self.nps = Character(3, (240, 0), random_npc_sprite, [(240, 140), (530, 140), (530, 120)])
+        print(f"Появился новый NPC: {random_npc_sprite.split('/')[-1]}")
+        self.npc_is_leaving = False
+        self.npc_sit_timer = None
 
     def add_completed_drink(self, drink_data):
         """ Добавление готового напитка для отображения и сравнения с заказом """
@@ -139,6 +162,7 @@ class OrderStation(Station):
             print("✗ ПОЛУЧИЛОСЬ НЕ ТО! Нужно переделать")
 
         print("=" * 50)
+        return match_percentage >= 60
 
     def draw_completed_drink(self, screen):
         """ Отрисовка готового напитка в левом нижнем углу """
@@ -213,6 +237,37 @@ class OrderStation(Station):
             portions_surface = info_font.render(portions_text, True, (255, 200, 200))
             screen.blit(portions_surface, (drink_x, stem_y + stem_height + 25))
 
+    def update_npc_state(self):
+        """ Обновление состояния NPC """
+        if self.nps:
+            # Проверяем, если NPC сидит более 3 секунд
+            if (self.nps.current_animation == 'sit_left' and
+                    not self.nps.is_moving and
+                    not self.npc_is_leaving):
+
+                if self.npc_sit_timer is None:
+                    # Запускаем таймер
+                    self.npc_sit_timer = py.time.get_ticks()
+                else:
+                    # Проверяем прошло ли 3 секунды
+                    elapsed_time = py.time.get_ticks() - self.npc_sit_timer
+                    if elapsed_time >= 3000:  # 3000 мс = 3 секунды
+                        # NPC уходит
+                        self.nps.is_moving = True
+                        self.nps.set_path(self.npc_return_path)
+                        self.npc_is_leaving = True
+                        self.npc_sit_timer = None
+                        print("NPC уходит...")
+
+            # Проверяем, если NPC вернулся на стартовую позицию
+            elif (self.npc_is_leaving and
+                  not self.nps.is_moving and
+                  self.nps.pos == [240, 0]):
+
+                print("NPC ушел. Появляется новый...")
+                # Создаем нового NPC
+                self.spawn_npc()
+
     def draw(self, screen):
         """ Отрисовка станции заказов """
         if not self.map_loaded:
@@ -222,8 +277,14 @@ class OrderStation(Station):
         self.map.draw(screen)
         self.player.update()
         self.player.draw(screen)
+
+        # Обновляем NPC
         self.nps.update()
         self.nps.draw(screen)
+
+        # Обновляем состояние NPC
+        self.update_npc_state()
+
         if self.draw_drink:
             self.draw_completed_drink(screen)
 
@@ -232,20 +293,31 @@ class OrderStation(Station):
         for event in events:
             if event.type == py.MOUSEBUTTONDOWN and event.button == 1:
                 # Проверка клика на NPC
-                if self.nps.is_clicked(event.pos):
+                if self.nps and self.nps.is_clicked(event.pos):
                     order.order_visible = True
 
                 # Проверка клика на готовый напиток
                 elif (self.completed_drink is not None and hasattr(self, 'drink_rect') and
                       self.drink_rect is not None and self.drink_rect.collidepoint(event.pos)):
-                    self.compare_with_order(self.completed_drink)
 
-                    # Задаем путь для NPC
-                    self.nps.set_path([(530, 120), (530, 140), (420, 140), (420, 200)])
+                    # Проверяем соответствие заказа
+                    order_success = self.compare_with_order(self.completed_drink)
 
-                    # Скрываем заказ и напиток
-                    order.order_visible = False
-                    self.draw_drink = False
+                    if order_success:
+                        print("Заказ выполнен успешно!")
+
+                        # Задаем путь для NPC к стулу
+                        self.nps.set_path([(530, 120), (530, 140), (420, 140), (420, 220)])
+
+                        # Скрываем заказ и напиток
+                        order.order_visible = True
+                        self.draw_drink = True
+                        self.completed_drink = None
+
+                        order.generate_new_order()
+
+                    else:
+                        print("Заказ не выполнен! Попробуйте еще раз.")
 
 class BrewStation(Station):
     """ Станция приготовления кофе """
